@@ -308,20 +308,19 @@ def transvese_laplacian(E,x,y):
     return E_grad_xx+E_grad_yy
 
 #def coupled_wave_eq_PDE_Loss(model,X,k_arr: torch.tensor(dtype=torch.float64),omega_arr: torch.tensor(dtype=torch.float64), kappa_i, kappa_s) -> torch.float64:
-def coupled_wave_eq_PDE_Loss(model,X,k_arr,omega_arr, kappa_i, kappa_s) -> torch.float64:
+def coupled_wave_eq_PDE_Loss(u,X,k_arr, kappa_i, kappa_s) -> torch.float64:
 
     '''
     A NAIVE coupled wave equation pde loss calculation.
     Params:
-        model - the nn, an object/function(?) which gets the spacial arguments 
+        model - the nn, an object/function(?) which gets the spatial arguments 
         and returns u - a tensor which describes the obtained function at the coordinates (explained also bellow).
-        X - spacial coordinates to evaluate at. a tensor of size (N,3). N - number of spacial points, 3 - |{x,y,z}|.
+        X - spatial coordinates to evaluate at. a tensor of size (N,3). N - number of spatial points, 3 - |{x,y,z}|.
         k_arr = [k_p,k_s,k_i]
 
         u - a tensor of (E_vac_i,E_out_s) , E_vac_i and E_out_s are tensors of size (3,N). or putting it differently, u is of size (6,N).
 
     '''
-    u=model(X)
     x=X[0]
     y=X[1]
     z=X[2]
@@ -371,6 +370,11 @@ def SPDC_loss(u,y,equation_dict):
     y0 = y[..., 0,:]
     ic_loss = LpLoss2D(u0, y0)
     data_loss = LpLoss3D(u,y)
-    pde_loss = 0 # TODO
+    
+    '''
+    maybe we need to pass a grid for this? 'X' - colocation points?
+    '''
+    #pde_loss = coupled_wave_eq_PDE_Loss(u,X,[equation_dict['k_pump'],equation_dict['k_signal'],equation_dict['k_idler']],equation_dict['kappa_idler'],equation_dict['kappa_signal']) # TODO
+    pde_loss=0
 
     return data_loss,ic_loss,pde_loss
