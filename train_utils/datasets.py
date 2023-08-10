@@ -1,6 +1,7 @@
 import scipy.io
 import numpy as np
 import pickle
+import gc
 
 try:
     from pyDOE import lhs
@@ -10,7 +11,7 @@ except ImportError:
 
 import torch
 from torch.utils.data import Dataset
-from .utils import get_grid3d, convert_ic, torch2dgrid
+from .utils import get_grid3d, convert_ic, torch2dgrid, get_spdc_grid3d
 
 
 def online_loader(sampler, S, T, time_scale, batchsize=1):
@@ -115,8 +116,8 @@ class BurgersLoader(object):
         return loader
 
 class SPDCLoader(object):
-    def __init__(self, datapath, nx = 121, ny = 121, nz =10,nin=3,nout=4, sub_xy=1, sub_z=1,
-                 N=10):
+    def __init__(self, datapath, nx = 121, ny = 121, nz =10,nin=3,nout=2, sub_xy=1, sub_z=1,
+                 N=10, device="cuda:0"):
         '''
         Load data from npy from a dictonary:
          "fields": np.ndarry shape (N,F=5, X, Y, Z)
@@ -125,55 +126,67 @@ class SPDCLoader(object):
          "k_signal" : scalar - The k of the signal
          "k_idler" : scalar - The k of the idler
          "kappa_signal" : scalar - The kappa of the signal
-        The fields are in order  (pump, signal vac, idler vac,signal out, idler out)
+        The fields are in order:  
+        (pump, signal vac, idler vac,signal out, idler out)
         Args:
             datapath: path to data
             nx: size of x axis
             ny: size of y axis
             nz: size of z axis
             nin: number of input fields (pump, signal vac, idler vac)
-            nout: number of output fields (signal vac, idler vac, signal out, idler out)
+            nout: number of output fields (signal out, idler out)
             sub_xy: reduce the resoultion in xy plane
             sub_t: reduce the resoultion in z axis
             N: number of data samples
         '''
-        self.X = nx // sub_xy
-        self.Y = ny // sub_xy
-        self.Z =  nz // sub_z
         self.nin = nin
         self.nout = nout
         with open(file=datapath,mode="rb") as file:
             self.data_dict = pickle.load(file)
-        self.data = torch.tensor(self.data_dict["fields"], dtype=torch.complex128)[..., ::sub_xy, ::sub_xy, ::sub_z]
+        self.data = torch.tensor(self.data_dict["fields"], dtype=torch.complex128,requires_grad=True)[..., ::sub_xy, ::sub_xy, ::sub_z]
+        self.data_dict["chi"] = torch.tensor(np.array(self.data_dict["chi"]), dtype=torch.complex128, requires_grad=True)[::sub_xy, ::sub_xy, ::sub_z]
         del self.data_dict["fields"]
+        self.X = self.data.size(2)
+        self.Y = self.data.size(3)
+        self.Z =  self.data.size(4)
+        self.F = self.data.size(1)
         self.data = self.data.permute(0,2,3,4,1)
 
+        real = self.data.real.reshape(N, self.X, self.Y, self.Z, 1, self.F).type(torch.float32)
+        imag = self.data.imag.reshape(N, self.X, self.Y, self.Z, 1, self.F).type(torch.float32)
+        self.data = torch.cat((real,imag),dim=-2)
+        gc.collect()
+        torch.cuda.empty_cache()
+
+
+
     def make_loader(self, n_sample, batch_size, start=0, train=True):
-        a_data = self.data[start:start + n_sample,:, :, 0,:self.nin].reshape(n_sample, self.X, self.Y,self.nin)
-        u_data = self.data[start:start + n_sample,:,:,:,-self.nout:].reshape(n_sample, self.X, self.Y, self.Z, self.nout)
+        a_data = self.data[start:start + n_sample,:, :, 0,:,:self.nin].reshape(n_sample, self.X, self.Y,self.nin*2)
+        u_data = self.data[start:start + n_sample,...].reshape(n_sample, self.X, self.Y, self.Z, (self.nin+self.nout)*2)
 
         assert self.X == self.Y
-        gridx, gridy, gridz = get_grid3d(self.X, self.Z)
-        a_data = a_data.reshape(n_sample, self.X, self.Y, 1, self.nin).repeat([1, 1, 1, self.Z, 1])
-        a_data = torch.cat((gridx.repeat([n_sample, 1, 1, 1, 1]),
-                            gridy.repeat([n_sample, 1, 1, 1, 1]),
-                            gridz.repeat([n_sample, 1, 1, 1, 1]),
+        gridx, gridy, gridz = get_spdc_grid3d(self.X, self.Z)
+        a_data = a_data.reshape(n_sample, self.X, self.Y, 1, self.nin*2).repeat([1, 1, 1, self.Z, 1])
+        a_data = torch.cat((gridx.reshape(1,self.X,self.X,self.Z,1).repeat([n_sample, 1, 1, 1, 1]),
+                            gridy.reshape(1,self.X,self.X,self.Z,1).repeat([n_sample, 1, 1, 1, 1]),
+                            gridz.reshape(1,self.X,self.X,self.Z,1).repeat([n_sample, 1, 1, 1, 1]),
                             a_data), dim=-1)
 
         dataset = torch.utils.data.TensorDataset(a_data, u_data)
-        loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=train)
+        # loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=train) # should change to that after finished overfit
+        loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=False)
         return loader
 
     def make_dataset(self, n_sample, start=0, train=True):
-        a_data = self.data[start:start + n_sample,:, :, 0,:self.nin].reshape(n_sample, self.X, self.Y,self.nin)
-        u_data = self.data[start:start + n_sample,:,:,:,-self.nout:].reshape(n_sample, self.X, self.Y, self.Z, self.nout)
+        a_data = self.data[start:start + n_sample,:, :, 0,:,:self.nin].reshape(n_sample, self.X, self.Y,self.nin*2)
+        u_data = self.data[start:start + n_sample,...].reshape(n_sample, self.X, self.Y, self.Z, (self.nin + self.nout)*2)
 
         assert self.X == self.Y
-        gridx, gridy, gridz = get_grid3d(self.X, self.Z)
-        a_data = a_data.reshape(n_sample, self.X, self.Y, 1, self.nin).repeat([1, 1, 1, self.Z, 1])
-        a_data = torch.cat((gridx.repeat([n_sample, 1, 1, 1, 1]),
-                            gridy.repeat([n_sample, 1, 1, 1, 1]),
-                            gridz.repeat([n_sample, 1, 1, 1, 1]),
+        gridx, gridy, gridz = get_spdc_grid3d(self.X, self.Z)
+        a_data = a_data.reshape(n_sample, self.X, self.Y, 1, self.nin*2).repeat([1, 1, 1, self.Z, 1])
+        a_data = torch.cat((gridx.reshape(1,self.X,self.X,self.Z,1).repeat([n_sample, 1, 1, 1, 1]),
+                            gridy.reshape(1,self.X,self.X,self.Z,1).repeat([n_sample, 1, 1, 1, 1]),
+                            gridz.reshape(1,self.X,self.X,self.Z,1).repeat([n_sample, 1, 1, 1, 1]),
                             a_data), dim=-1)
 
         dataset = torch.utils.data.TensorDataset(a_data, u_data)
