@@ -43,11 +43,22 @@ else:
     print("creating data")
     np.random.seed(seed)
     for n in range(N_samples):
-
-        key = random.PRNGKey(seed)
-        rand_key, subkey = random.split(key)
-        self.vacuum_states = random.normal(subkey,shape=(N,2,2,shape.Nx,shape.Ny))
-
+        max_mode1 = 20
+        max_mode2 = 20
+        total_modes = max_mode1*(2*max_mode2+1)
+        coeff = np.random.rand(2,total_modes)
+        pump_coef = {"max_mode1": max_mode1, 
+        "max_mode2":max_mode2, 
+        "real_coef":coeff[0],
+        "img_coef":coeff[1]}
+        A = SPDC_solver(N=1,config=config,pump_coef=pump_coef,data_creation=True)
+        A.solve()
+        if n==0:
+            fields = A.data["fields"]
+        else: 
+            fields = np.append(fields,A.data["fields"],axis=0)
+    data = A.data
+    data["fields"] = fields
 
 
 
