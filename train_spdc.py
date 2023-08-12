@@ -41,7 +41,12 @@ def train_SPDC(model,
     f_weight = config['train']['f_loss']
     ic_weight = config['train']['ic_loss']
     nout = config['data']['nout']
-    grad = config['model']['grad']
+
+    if 'grad' in config['model']:
+        grad = config['model']['grad']
+    else:
+        grad = 'autograd'
+
 
     model.train()
     pbar = range(config['train']['epochs'])
