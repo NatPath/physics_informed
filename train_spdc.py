@@ -49,6 +49,7 @@ def train_SPDC(model,
         pbar = tqdm(pbar, dynamic_ncols=True, smoothing=0.1)
 
     min_train_loss=float('inf')
+    min_valid_loss=float('inf')
     for e in pbar:
         model.train()
         train_pino = 0.0
@@ -90,6 +91,13 @@ def train_SPDC(model,
                                         device=rank,
                                         use_tqdm=False,
                                         validation=True)
+
+            if validation_loss<min_valid_loss:
+                min_valid_loss=validation_loss
+                save_checkpoint(config['train']['save_dir'],
+                                config['train']['save_name'].replace('.pt', f'_best_validation_yet.pt'),
+                                model, optimizer)
+
             if use_tqdm:
                 pbar.set_description(
                     (
