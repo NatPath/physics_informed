@@ -36,6 +36,6 @@ train:
 
 log:
   project: PINO-spdc-test
-  group: gelu-eqn
-  entity: hzzheng-pino
+  group: ml4physics_spdc
+  entity: ml4physics_spdc
 
