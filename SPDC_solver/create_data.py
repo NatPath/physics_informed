@@ -2,10 +2,12 @@ from SPDC_solver import *
 import numpy as np
 from argparse import ArgumentParser
 import pickle
+from tqdm import tqdm
 
 N_samples = 10
 seed = 1701
 fixed_pump = True
+spp = 1
 config = Config(pump_waist=80e-6)
 
 if __name__ == '__main__':
@@ -14,11 +16,14 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, help='Seed for the random pump profile (if needed)')
     parser.add_argument('--loc', type=str, help='Location to save the file, if not specifed save at a deafult location')
     parser.add_argument('--change_pump', action='store_true', help='Creates different pump profiles')
+    parser.add_argument('--spp', type=int, help='Number of samples that will be created for each pump (Only if "chang_pump" is in use)')
+
     args = parser.parse_args()
     N_samples = args.N
     seed = args.seed
     fixed_pump = not args.change_pump
     loc = args.loc
+    spp = args.spp
 
 
 defult_loc = "/home/dor-hay.sha/project/data/spdc/"
@@ -42,7 +47,7 @@ else:
     
     print("creating data")
     np.random.seed(seed)
-    for n in range(N_samples):
+    for n in tqdm(range(N_samples//spp)):
         max_mode1 = 20
         max_mode2 = 20
         total_modes = max_mode1*(2*max_mode2+1)
@@ -51,7 +56,7 @@ else:
         "max_mode2":max_mode2, 
         "real_coef":coeff[0],
         "img_coef":coeff[1]}
-        A = SPDC_solver(N=1,config=config,pump_coef=pump_coef,data_creation=True)
+        A = SPDC_solver(N=spp,config=config,pump_coef=pump_coef,data_creation=True)
         A.solve()
         if n==0:
             fields = A.data["fields"]
