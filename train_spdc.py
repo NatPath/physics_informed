@@ -40,6 +40,12 @@ def train_SPDC(model,
     data_weight = config['train']['xy_loss']
     f_weight = config['train']['f_loss']
     ic_weight = config['train']['ic_loss']
+    #normalize weights to sum to 1
+    sum_weights=data_weight+f_weight+ic_weight
+    data_weight=data_weight/sum_weights
+    f_weight=f_weight/sum_weights
+    ic_weight=ic_weight/sum_weights
+
     nout = config['data']['nout']
 
     if 'grad' in config['model']:
@@ -290,8 +296,8 @@ def run(args, config):
                                      n_sample=data_config['total_num'] - data_config['n_sample'],
                                      batch_size=config['train']['batchsize'],
                                      start=data_config['n_sample'],train=False)
-        del dataset
-        gc.collect()
+    del dataset
+    gc.collect()
     torch.cuda.empty_cache()
 
     # Load from checkpoint

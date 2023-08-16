@@ -401,6 +401,7 @@ def fourier_diff_of_E(E,k):
 def fourier_diffs_of_E(E,kx,ky,kz):
     return fourier_diff_of_E(E,kx), fourier_diff_of_E(E,ky), fourier_diff_of_E(E,kz)
 
+
 def coupled_wave_eq_PDE_Loss_fourier(u,X,k_arr, kappa_i, kappa_s) -> torch.float64:
     delta_k=k_arr[0]-(k_arr[1]+k_arr[2])
     x=X[0]
@@ -643,6 +644,8 @@ def SPDC_loss(u,y,input,equation_dict, grad="autograd"):
         pde_res = coupled_wave_eq_PDE_Loss(u=u,y=y,input=input,equation_dict=equation_dict)
     elif grad == "numeric":
         pde_res = coupled_wave_eq_PDE_Loss_numeric(u=u,equation_dict=equation_dict,grid_z=input[...,-1])
+    elif grad == "fourier":
+        pde_res = coupled_wave_eq_PDE_Loss_fourier(u=u,equation_dict=equation_dict,grid_z=input[...,-1])
     elif grad == "none":
         pde_res = torch.zeros(u.shape,dtype=input.dtype)
     
