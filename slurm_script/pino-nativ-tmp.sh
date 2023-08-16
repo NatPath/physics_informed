@@ -19,5 +19,5 @@ conda activate pino-env
 
 ## Run the script
 nvidia-smi
-python train_spdc.py --config_path configs/ngc/SPDC-pino-100-loss_ratio-4-pump-random.yaml --mode train --log --validate
+python train_spdc.py --config_path configs/ngc/SPDC-pino-100-loss_ratio-0-pump-random.yaml --mode train --log --validate
 echo Done
