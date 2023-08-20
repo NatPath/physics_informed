@@ -9,7 +9,7 @@
 #SBATCH --ntasks=1  ## number of tasks (analyses) to run
 #SBATCH --gres=gpu:A40:1          # Request 1 gpu type A40
 #SBATCH --exclude=nlp-a40-1
-#SBATCH --time=0-23:10:00  ## time for analysis (day-hour:min:sec)
+#SBATCH --time=0-10:10:00  ## time for analysis (day-hour:min:sec)
 
 ##Load the CUDA module
 module load cuda
@@ -19,5 +19,5 @@ conda activate pino-env
 
 ## Run the script
 nvidia-smi
-python train_spdc.py --config_path configs/ngc/SPDC-pino-100-loss_ratio-0-pump-random.yaml --mode train --log --validate
+python train_spdc.py --config_path configs/ngc/SPDC-pino-100-loss_ratio-4-pump-random.yaml --mode train --log --validate
 echo Done

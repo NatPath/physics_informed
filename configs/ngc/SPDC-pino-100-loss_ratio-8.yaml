@@ -25,8 +25,8 @@ model:
   grad: 'autograd'
 
 train:
-  batchsize: 4
-  epochs: 1500
+  batchsize: 2
+  epochs: 500
   milestones: [150, 300, 450]
   base_lr: 0.001
   scheduler_gamma: 0.5
