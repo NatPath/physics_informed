@@ -15,3 +15,9 @@ exp
 Miniconda3-py39_4.12.0-Linux-x86_64.sh
 SPDC_solver/error_analysis/*
 tmp_fig
+slurm_script/output
+configs/ngc/SPDC-pino-100_copy.yaml
+configs/operator/SPDC-FNO-tmp.yaml
+slurm_script/FNO-tmp.sh
+configs/test/SPDC-test-tmp.yaml
+slurm_script/FNO-tmp copy.sh

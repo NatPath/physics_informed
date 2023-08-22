@@ -300,14 +300,13 @@ def transvese_laplacian(E,input):
     calculates the transverse laplacian given E and coordinates.
     Args:
     E: The tensor to be derived of shape (batchsize,X,Y,Z,2) the last index is the real and imag part.
-    input: The input to the network. a tensor of size (batchsize,X,Y,Z,9) where input[...,-3:] = grid_x,grid_y,grid_z
+    input: The input to the network. a tensor of size (batchsize,X,Y,Z,9) where input[...,:3] = grid_x,grid_y,grid_z
 
     return:
     Tuple (E_z,E_xx_yy) each of which is a complex tensor in shape (batchsize,X,Y,Z) of the derived field according to the z axis and the tranverse laplecian
     NOTE:
     need to check if needs to multiply by minus
     '''
-<<<<<<< HEAD
     #real part
     E_real = E[...,0]
     grad =torch.autograd.grad(outputs=E_real.sum(),inputs=input,retain_graph=True, create_graph=True)[0]
@@ -351,40 +350,10 @@ def coupled_wave_eq_PDE_Loss(u,y,input,equation_dict):
         "kappa_signal" -  scalar, the kappa signal coef
         "kappa_idler" -  scalar, the kappa idler coef
 
-=======
-    E_grad_x=torch.autograd.grad(outputs=[E],inputs=[x])
-    E_grad_y=torch.autograd.grad(outputs=[E],inputs=[y])
-    E_grad_xx=torch.autograd.grad(outputs=[E_grad_x],inputs=[x])
-    E_grad_yy=torch.autograd.grad(outputs=[E_grad_y],inputs=[y])
-    return E_grad_xx+E_grad_yy
-
-#def coupled_wave_eq_PDE_Loss(model,X,k_arr: torch.tensor(dtype=torch.float64),omega_arr: torch.tensor(dtype=torch.float64), kappa_i, kappa_s) -> torch.float64:
-def coupled_wave_eq_PDE_Loss(u,X,k_arr, kappa_i, kappa_s) -> torch.float64:
-
-    '''
-    A NAIVE coupled wave equation pde loss calculation.
-    Params:
-        u - a tensor which describes the obtained function at the coordinates (explained also bellow).
-        X - spatial coordinates to evaluate at. a tensor of size (N,3). N - number of spatial points, 3 - |{x,y,z}|.
-        k_arr = [k_p,k_s,k_i]
-        u - a tensor of (E_vac_i,E_out_s,E_vac_s,E_out_i) , E_vac_i and E_out_s are tensors of size N. or putting it differently, u is of size (2,N).
->>>>>>> ded4b332e14703b401aabe5d7428e4313a0baba9
 
     return:
         The residule of the equations in tensor shape (batchsize,X,Y,Z,2)
     '''
-<<<<<<< HEAD
-=======
-    x=X[0]
-    y=X[1]
-    z=X[2]
-    E_vac_i= u[...,0]
-    E_out_s=u[...,1]
-    E_vac_s= u[...,2]
-    E_out_i=u[...,3]
-
-    delta_k=k_arr[0]-(k_arr[1]+k_arr[2])
->>>>>>> ded4b332e14703b401aabe5d7428e4313a0baba9
 
 
     delta_k= equation_dict["k_pump"].item() - equation_dict["k_signal"].item() - equation_dict["k_idler"].item()
@@ -423,29 +392,15 @@ def coupled_wave_eq_PDE_Loss(u,X,k_arr, kappa_i, kappa_s) -> torch.float64:
     res1 = res(idler_out_z,idler_out_xx_yy, equation_dict["k_idler"].item(),kappa_i,signal_vac)
     res2 = res(signal_out_z,signal_out_xx_yy, equation_dict["k_signal"].item(),kappa_s,idler_vac)
 
-<<<<<<< HEAD
     residual = torch.cat((res1,res2),dim=-1) # may need to add differend weights
     return torch.abs(residual).type(torch.float32)
-=======
-    E_vac_s_grad_z=torch.autograd.grad(outputs=[E_vac_s],inputs=[z])
-    E_vac_s_transverse_laplacian=transvese_laplacian(E_vac_s,x,y)
-
-    E_out_i_grad_z=torch.autograd.grad(outputs=[E_out_i],inputs=[z])
-    E_out_i_transverse_laplacian=transvese_laplacian(E_out_i,x,y)
-
-    residual_1 = -E_vac_i_transverse_laplacian/(2*k_arr[2]) + kappa_i*torch.exp(-1j*delta_k*z)*E_out_s.conj()-1j*E_vac_i_grad_z
-    residual_2 = -E_out_s_transverse_laplacian/(2*k_arr[1]) + kappa_s*torch.exp(-1j*delta_k*z)*E_vac_i.conj()-1j*E_out_s_grad_z
-    residual_3 = -E_vac_s_transverse_laplacian/(2*k_arr[2]) + kappa_i*torch.exp(-1j*delta_k*z)*E_out_i.conj()-1j*E_vac_s_grad_z
-    residual_4 = -E_out_i_transverse_laplacian/(2*k_arr[1]) + kappa_s*torch.exp(-1j*delta_k*z)*E_vac_s.conj()-1j*E_out_i_grad_z
-
-    return torch.sum(abs(residual_1))+torch.sum(abs(residual_2))+torch.sum(abs(residual_3))+torch.sum(abs(residual_4))
->>>>>>> ded4b332e14703b401aabe5d7428e4313a0baba9
 
 def fourier_diff_of_E(E,k):
     factor=2j*np.pi
     return factor*k*E
 def fourier_diffs_of_E(E,kx,ky,kz):
     return fourier_diff_of_E(E,kx), fourier_diff_of_E(E,ky), fourier_diff_of_E(E,kz)
+
 
 def coupled_wave_eq_PDE_Loss_fourier(u,X,k_arr, kappa_i, kappa_s) -> torch.float64:
     delta_k=k_arr[0]-(k_arr[1]+k_arr[2])
@@ -652,7 +607,7 @@ def SPDC_loss(u,y,input,equation_dict, grad="autograd"):
     '''
     Calcultae and return the data loss, pde loss and ic (Initial condition) loss
     Args:
-    u: The output of the network - tensor of shape (batch size, Nx, Ny, Nz, 2*nout) - where nout is the number of out fields (*2 because of both real and imag part). The fields order: (signal out, idler outs)
+    u: The output of the network - tensor of shape (batch size, Nx, Ny, Nz, 2*nout) - where nout is the number of out fields (*2 because of both real and imag part). The fields order: (signal out, idler out)
     y: The entire ground truth solution - tensor of shape 
         (batch size, Nx, Ny, Nz, 2*(nin+nout)) - where nout is the number of out fields (*2 because of both real and imag part). The fields order:      (pump,signal vac, idler vac, signal out, idler out)
     input: The input to the network. a tensor of size (batchsize,X,Y,3+2*nin = 9)
@@ -673,14 +628,14 @@ def SPDC_loss(u,y,input,equation_dict, grad="autograd"):
     Return: (data_loss,ic_loss,pde_loss)
     '''
 
-<<<<<<< HEAD
     mse_loss = lambda x: F.mse_loss(torch.abs(x),torch.zeros(x.shape,device=x.device,dtype=input.dtype))
+    # mse_loss = lambda x: F.l1_loss(torch.abs(x),torch.zeros(x.shape,device=x.device,dtype=input.dtype)) # trying L1 loss
     batchsize = u.size(0)
     nx = u.size(1)
     ny = u.size(2)
     nz = u.size(3)
     u_nfields = u.size(4)//2 # should be 2
-    y_nfields = y.size(4)//2 # should be 2
+    y_nfields = y.size(4)//2 # should be 5
 
     u = u.reshape(batchsize,nx, ny, nz,2,u_nfields)
     y = y.reshape(batchsize,nx, ny, nz,2,y_nfields)
@@ -689,11 +644,11 @@ def SPDC_loss(u,y,input,equation_dict, grad="autograd"):
         pde_res = coupled_wave_eq_PDE_Loss(u=u,y=y,input=input,equation_dict=equation_dict)
     elif grad == "numeric":
         pde_res = coupled_wave_eq_PDE_Loss_numeric(u=u,equation_dict=equation_dict,grid_z=input[...,-1])
+    elif grad == "fourier":
+        pde_res = coupled_wave_eq_PDE_Loss_fourier(u=u,equation_dict=equation_dict,grid_z=input[...,-1])
     elif grad == "none":
         pde_res = torch.zeros(u.shape,dtype=input.dtype)
     
-    pde_loss = mse_loss(pde_res)
-
 
     u_full = u[...,0,:] + 1j*u[...,1,:] # real part + j * imag part
     y_full = y[...,0,:] + 1j*y[...,1,:] # real part + j * imag part
@@ -702,21 +657,9 @@ def SPDC_loss(u,y,input,equation_dict, grad="autograd"):
     u0 = u_full[..., 0,:]
     y0 = y_full[..., 0,:]
     ic_loss = mse_loss(u0-y0[...,-2:])
-    data_loss = mse_loss(u_full-y_full[...,-2:])
-
+    data_loss = mse_loss(u_full-y_full[...,-2:])/mse_loss(y_full[...,-2:])
+    pde_loss = mse_loss(pde_res)/1e5/0.7578
     gc.collect()
     torch.cuda.empty_cache()
-=======
-    u0 = u[..., 0,:]
-    y0 = y[..., 0,:]
-    ic_loss = LpLoss2D(u0, y0)
-    data_loss = LpLoss3D(u,y)
-    
-    '''
-    maybe we need to pass a grid for this? 'X' - colocation points?
-    '''
-    #pde_loss = coupled_wave_eq_PDE_Loss(u,X,[equation_dict['k_pump'],equation_dict['k_signal'],equation_dict['k_idler']],equation_dict['kappa_idler'],equation_dict['kappa_signal']) # TODO
-    pde_loss=0
->>>>>>> ded4b332e14703b401aabe5d7428e4313a0baba9
 
     return data_loss,ic_loss,pde_loss
