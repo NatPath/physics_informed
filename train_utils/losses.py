@@ -395,6 +395,84 @@ def coupled_wave_eq_PDE_Loss(u,y,input,equation_dict):
     residual = torch.cat((res1,res2),dim=-1) # may need to add differend weights
     return torch.abs(residual).type(torch.float32)
 
+def fourier_diff_of_E(E,k):
+    factor=2j*np.pi
+    return factor*k*E
+def fourier_diffs_of_E(E,kx,ky,kz):
+    return fourier_diff_of_E(E,kx), fourier_diff_of_E(E,ky), fourier_diff_of_E(E,kz)
+
+
+def coupled_wave_eq_PDE_Loss_fourier(u,X,k_arr, kappa_i, kappa_s) -> torch.float64:
+    delta_k=k_arr[0]-(k_arr[1]+k_arr[2])
+    x=X[0]
+    y=X[1]
+    z=X[2]
+
+    batchsize = u.size(0)
+    nx = u.size(1)
+    ny = u.size(2)
+    nz = u.size(3)
+    nf = u.size(4)
+    u = u.reshape(batchsize, nx, ny, nz,nf)
+
+    E_out_i=u[...,3]
+    E_vac_i= u[...,0]
+    E_out_s=u[...,1]
+    E_vac_s= u[...,2]
+
+    E_out_i_h = torch.fft.fftn(E_out_i, dim=[1, 2, 3])
+    E_vac_i_h = torch.fft.fftn(E_vac_i, dim=[1, 2, 3])
+    E_out_s_h = torch.fft.fftn(E_out_s, dim=[1, 2, 3])
+    E_vac_s_h = torch.fft.fftn(E_vac_s, dim=[1, 2, 3])
+
+    k_x_max = nx//2
+    k_y_max = ny//2
+    k_z_max = nz//2
+
+    k_x = torch.cat((torch.arange(start=0, end=k_x_max, step=1),
+                     torch.arange(start=-k_x_max, end=0, step=1)), 0).reshape(nx, 1).repeat(1, nx).reshape(1,nx,nx,1)
+    k_y = torch.cat((torch.arange(start=0, end=k_y_max, step=1),
+                     torch.arange(start=-k_y_max, end=0, step=1)), 0).reshape(1, ny).repeat(ny, 1).reshape(1,ny,ny,1)
+    k_z = torch.cat((torch.arange(start=0, end=k_z_max, step=1),
+                     torch.arange(start=-k_z_max, end=0, step=1)), 0).reshape(1, nz).repeat(nz, 1).reshape(1,nz,nz,1)
+
+    E_out_i_div_x_h, E_out_i_div_y_h, E_out_i_div_z_h= fourier_diffs_of_E(E_out_i_h,k_x,k_y,k_z)
+    E_vac_i_div_x_h, E_vac_i_div_y_h, E_vac_i_div_z_h= fourier_diffs_of_E(E_vac_i_h,k_x,k_y,k_z)
+    E_out_s_div_x_h, E_out_s_div_y_h, E_out_s_div_z_h= fourier_diffs_of_E(E_out_s_h,k_x,k_y,k_z)
+    E_vac_s_div_x_h, E_vac_s_div_y_h, E_vac_s_div_z_h= fourier_diffs_of_E(E_vac_s_h,k_x,k_y,k_z)
+
+    E_out_i_div_xx_h = fourier_diff_of_E(E_out_i_div_x_h,k_x)
+    E_vac_i_div_xx_h = fourier_diff_of_E(E_vac_i_div_x_h,k_x)
+    E_out_s_div_xx_h = fourier_diff_of_E(E_out_s_div_x_h,k_x)
+    E_vac_s_div_xx_h = fourier_diff_of_E(E_vac_s_div_x_h,k_x)
+    
+    E_out_i_div_yy_h = fourier_diff_of_E(E_out_i_div_y_h,k_x)
+    E_vac_i_div_yy_h = fourier_diff_of_E(E_vac_i_div_y_h,k_x)
+    E_out_s_div_yy_h = fourier_diff_of_E(E_out_s_div_y_h,k_x)
+    E_vac_s_div_yy_h = fourier_diff_of_E(E_vac_s_div_y_h,k_x)
+
+    E_out_i_trans_laplace_h = E_out_i_div_xx_h+E_out_i_div_yy_h
+    E_vac_i_trans_laplace_h = E_vac_i_div_xx_h+E_vac_i_div_yy_h
+    E_out_s_trans_laplace_h = E_out_s_div_xx_h+E_out_s_div_yy_h
+    E_vac_s_trans_laplace_h = E_vac_s_div_xx_h+E_vac_s_div_yy_h
+
+    E_out_i_trans_laplace = torch.fft.ifft(E_out_i_trans_laplace_h, dim=[1,2,3])
+    E_vac_i_trans_laplace = torch.fft.ifft(E_vac_i_trans_laplace_h, dim=[1,2,3])
+    E_out_s_trans_laplace = torch.fft.ifft(E_out_s_trans_laplace_h, dim=[1,2,3])
+    E_vac_s_trans_laplace = torch.fft.ifft(E_vac_s_trans_laplace_h, dim=[1,2,3])
+
+    E_out_i_div_z = torch.fft.ifft(E_out_i_div_z_h, dim=[1,2,3])
+    E_vac_i_div_z = torch.fft.ifft(E_vac_i_div_z_h, dim=[1,2,3])
+    E_out_s_div_z = torch.fft.ifft(E_out_s_div_z_h, dim=[1,2,3])
+    E_vac_s_div_z = torch.fft.ifft(E_vac_s_div_z_h, dim=[1,2,3])
+
+    
+    residual_1 = -E_out_i_trans_laplace/(2*k_arr[2]) + kappa_i*torch.exp(-1j*delta_k*z)*E_vac_s.conj()-1j*E_out_i_div_z
+    residual_2 = -E_out_s_trans_laplace/(2*k_arr[1]) + kappa_s*torch.exp(-1j*delta_k*z)*E_out_s.conj()-1j*E_vac_i_div_z
+    residual_3 = -E_vac_s_trans_laplace/(2*k_arr[2]) + kappa_i*torch.exp(-1j*delta_k*z)*E_vac_i.conj()-1j*E_out_s_div_z
+    residual_4 = -E_vac_i_trans_laplace/(2*k_arr[1]) + kappa_s*torch.exp(-1j*delta_k*z)*E_out_i.conj()-1j*E_vac_s_div_z
+
+    return torch.sum(abs(residual_1))+torch.sum(abs(residual_2))+torch.sum(abs(residual_3))+torch.sum(abs(residual_4))
 
 # ------ Need to be updated ---------
 def coupled_wave_eq_PDE_Loss_numeric(u,equation_dict,grid_z,pump):
@@ -566,6 +644,8 @@ def SPDC_loss(u,y,input,equation_dict, grad="autograd"):
         pde_res = coupled_wave_eq_PDE_Loss(u=u,y=y,input=input,equation_dict=equation_dict)
     elif grad == "numeric":
         pde_res = coupled_wave_eq_PDE_Loss_numeric(u=u,equation_dict=equation_dict,grid_z=input[...,-1])
+    elif grad == "fourier":
+        pde_res = coupled_wave_eq_PDE_Loss_fourier(u=u,equation_dict=equation_dict,grid_z=input[...,-1])
     elif grad == "none":
         pde_res = torch.zeros(u.shape,dtype=input.dtype)
     

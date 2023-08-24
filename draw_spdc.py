@@ -11,10 +11,10 @@ import torch.nn.functional as F
 import gc
 import matplotlib.pyplot as plt
 from matplotlib import cm
+import os
 
 
-
-def plot_av_sol(u,y):
+def plot_av_sol(u,y,ckpt_name):
     # y = torch.ones_like(y)
     N,nx,ny,nz,u_nfields = u.shape
     y_nfields = y.shape[4]
@@ -33,9 +33,9 @@ def plot_av_sol(u,y):
             surf = ax.plot_surface(X, Y, (np.mean(np.abs(sol[...,-1,i])**2,axis=0)), cmap=cm.coolwarm,linewidth=0, antialiased=False)
             fig.colorbar(surf, shrink=0.5, aspect=5)
             plt.title(f"{dict[i]}-{src}")
-            plt.savefig(f"tmp_fig/{dict[i]}-{src}.jpg")
+            plt.savefig(f"tmp_fig/{ckpt_name}-{dict[i]}-{src}.jpg")
 
-def plot_singel_sol(u,y,j):
+def plot_singel_sol(u,y,j,ckpt_name):
 
     N,nx,ny,nz,nfields = u.shape
     u = u.reshape(N,nx, ny, nz,2,nfields//2)
@@ -53,12 +53,12 @@ def plot_singel_sol(u,y,j):
             surf = ax.plot_surface(X, Y, np.real(sol[j,...,-1,i]), cmap=cm.coolwarm,linewidth=0, antialiased=False)
             fig.colorbar(surf, shrink=0.5, aspect=5)
             plt.title(f"{dict[i]}-{src}")
-            plt.savefig(f"tmp_fig/{dict[i]}-{src}-real.jpg")
+            plt.savefig(f"tmp_fig/{ckpt_name}-{dict[i]}-{src}-real.jpg")
             fig, ax = plt.subplots(dpi=150,subplot_kw={"projection": "3d"})
             surf = ax.plot_surface(X, Y, np.imag(sol[j,...,-1,i]), cmap=cm.coolwarm,linewidth=0, antialiased=False)
             fig.colorbar(surf, shrink=0.5, aspect=5)
             plt.title(f"{dict[i]}-{src}")
-            plt.savefig(f"tmp_fig/{dict[i]}-{src}-imag.jpg")
+            plt.savefig(f"tmp_fig/{ckpt_name}-{dict[i]}-{src}-imag.jpg")
 
 def draw_SPDC(model,
                  dataloader,
@@ -69,6 +69,8 @@ def draw_SPDC(model,
                  use_tqdm=True):
     model.eval()
     nout = config['data']['nout']
+    ckpt_path=config['test']['ckpt']
+    ckpt_name=os.path.basename(ckpt_path) 
     if use_tqdm:
         pbar = tqdm(dataloader, dynamic_ncols=True, smoothing=0.05)
     else:
@@ -85,8 +87,8 @@ def draw_SPDC(model,
             # out = out[...,:-padding,:, :] # if padding is not 0
         total_out = torch.cat((total_out,out.to("cpu")),dim=0)
         total_y = torch.cat((total_y,y.to("cpu")),dim=0)
-    plot_av_sol(total_out,total_y)
-    # plot_singel_sol(total_out,total_y,1)
+    plot_av_sol(total_out,total_y,ckpt_name)
+    # plot_singel_sol(total_out,total_y,1,ckpt_name)
 
 
 
