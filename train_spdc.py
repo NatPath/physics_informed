@@ -6,7 +6,7 @@ import numpy as np
 from models import FNO3d
 from train_utils import Adam
 from train_utils.datasets import SPDCLoader
-from train_utils.utils import save_checkpoint
+from train_utils.utils import save_checkpoint, subsample_xy
 from train_utils.losses import LpLoss, darcy_loss, PINO_loss, SPDC_loss
 from tqdm import tqdm
 import torch.nn.functional as F
@@ -53,6 +53,11 @@ def train_SPDC(model,
     else:
         grad = 'autograd'
 
+    chi_orignial = equation_dict["chi"]
+    subsample_nxy = None
+    if config["data"].get("subsample_xy") is not None:
+        subsample_nxy = config["data"]["subsample_xy"]
+
 
     model.train()
     pbar = range(config['train']['epochs'])
@@ -70,6 +75,13 @@ def train_SPDC(model,
         for x, y in train_loader:
             gc.collect()
             torch.cuda.empty_cache()
+
+            if subsample_nxy is not None:
+                chi = chi_orignial
+                chi = chi.reshape(1,chi.size(0),chi.size(1),chi.size(2))
+                x,y,chi = subsample_xy([x,y,chi],subsample_nxy,subsample_nxy)
+                equation_dict["chi"] = chi.reshape(chi.size(1),chi.size(2),chi.size(3))
+                
             x, y = x.to(rank), y.to(rank)
             # y = torch.ones_like(y).to(rank)
             x_in = F.pad(x,(0,0,0,padding),"constant",0).type(torch.float32)
@@ -175,6 +187,11 @@ def eval_SPDC(model,
     model.eval()
     nout = config['data']['nout']
     grad = config['model']['grad']
+    equation_dict_orignial = equation_dict
+    subsample_nxy = None
+
+    if config["data"].get("subsample_xy") is not None:
+        subsample_nxy = config["data"]["subsample_xy"]
 
     if use_tqdm:
         pbar = tqdm(dataloader, dynamic_ncols=True, smoothing=0.05)
@@ -188,6 +205,14 @@ def eval_SPDC(model,
     for x, y in pbar:
         gc.collect()
         torch.cuda.empty_cache()
+
+        if subsample_nxy is not None:
+            equation_dict = equation_dict_orignial.copy()
+            chi = equation_dict["chi"]
+            chi = chi.reshape(1,chi.size(0),chi.size(1),chi.size(2))
+            x,y,chi = subsample_xy([x,y,chi],subsample_nxy,subsample_nxy)
+            equation_dict["chi"] = chi.reshape(chi.size(1),chi.size(2),chi.size(3))
+        
         x, y = x.to(device), y.to(device)
         x_in = F.pad(x,(0,0,0,padding),"constant",0)
         out = model(x_in).reshape(y.shape[0],y.shape[1],y.shape[2],y.shape[3] + padding, 2*nout)
@@ -222,6 +247,8 @@ def eval_dummy_SPDC(dataloader,
                  use_tqdm=True):
     nout = config['data']['nout']
     grad = config['model']['grad']
+
+
     if use_tqdm:
         pbar = tqdm(dataloader, dynamic_ncols=True, smoothing=0.05)
     else:

@@ -68,16 +68,16 @@ def get_sample(N, T, s, p, q):
     sample = torch.stack([sample_t, sample_x], dim=-1).reshape(N, (p+p+q), 2)
     return sample, sample_t, sample_x, index_ic.long()
 
-def subsample_xy(input,nx,ny,y=None):
-    # create a tensor randomly subsampled from input of shape (N,nx,ny,Z,F). 
+def subsample_xy(tensors,nx,ny,y=None):
+    # create a tensor randomly subsampled from input of shape (N,nx,ny,Z,F) for each tensor in tuples input. 
     # If y is not none slice it by the same indices.
     # Args:
-    #   input: tensor of shape (N,X,Y,Z,F)
+    #   tensors: tuple of tensors of shape (N,X,Y,Z,F)
     #   nx,ny: int - number of x,y points at the out tensor
-    #   y: tensor of the sampe shape is input to be sliced by the same indices
     # 
     # out:
-    #   tensor of shape (N,nx,ny,Z,F)
+    #   tuple tensor of shape (N,nx,ny,Z,F)
+    input = tensors[0]
     X = input.size(1)
     Y = input.size(2)
     if (nx > X) or (ny > Y):
@@ -86,11 +86,8 @@ def subsample_xy(input,nx,ny,y=None):
     indices_x = torch.sort(torch.randperm(X)[:nx]).values
     indices_y = torch.sort(torch.randperm(Y)[:ny]).values
     xx, yy = torch.meshgrid(indices_x, indices_y, indexing='ij')
-    out = input[:,xx,yy,:,:]
-    if y is not None:
-        y_out = y[:,xx,yy,:,:]
-        return out,y_out
-    return out
+    out_tensors = [t[:,xx,yy,...] for t in tensors]
+    return out_tensors
 
 
 def get_grid(N, T, s):
