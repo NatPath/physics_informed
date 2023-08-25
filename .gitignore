@@ -23,4 +23,4 @@ configs/test/SPDC-test-tmp.yaml
 slurm_script/FNO-tmp copy.sh
 configs/ngc/SPDC-pino-tmp.yaml
 slurm_script/pino-tmp.sh
-slurm_script/pino-tmp.sh
+configs/ngc/SPDC-pino-tmp.yaml
