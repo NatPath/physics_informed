@@ -12,6 +12,7 @@ import gc
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import os
+import emd
 
 
 def plot_av_sol(u,y,ckpt_name):
@@ -22,6 +23,7 @@ def plot_av_sol(u,y,ckpt_name):
     y = y.reshape(N,nx, ny, nz,2,y_nfields//2)[...,-2:]
     u = (u[...,0,:] + 1j*u[...,1,:]).detach().numpy()
     y = (y[...,0,:] + 1j*y[...,1,:]).detach().numpy()
+    pics=[]
     for sol,src in zip([u,y],["prediction", "grt"]):
         dict = {0:"signal out", 1:"idler out"}
         maxXY = 120e-6
@@ -30,10 +32,18 @@ def plot_av_sol(u,y,ckpt_name):
         X,Y = np.meshgrid(xy,xy)
         for i in range(2):
             fig, ax = plt.subplots(dpi=150,subplot_kw={"projection": "3d"})
-            surf = ax.plot_surface(X, Y, (np.mean(np.abs(sol[...,-1,i])**2,axis=0)), cmap=cm.coolwarm,linewidth=0, antialiased=False)
+            pic=np.mean(np.abs(sol[...,-1,i])**2,axis=0) 
+            pics.append(pic)
+            surf = ax.plot_surface(X, Y, pic, cmap=cm.coolwarm,linewidth=0, antialiased=False)
             fig.colorbar(surf, shrink=0.5, aspect=5)
             plt.title(f"{dict[i]}-{src}")
             plt.savefig(f"tmp_fig/{ckpt_name}-{dict[i]}-{src}.jpg")
+
+    #calculate emd
+    emd_signal=emd.emd(pic[0],pic[2])
+    emd_idler=emd.emd(pic[1],pic[3])
+    print(f'emd signal is {emd_signal}')
+    print(f'emd idler is {emd_idler}')
 
 def plot_singel_sol(u,y,j,ckpt_name):
 
