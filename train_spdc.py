@@ -106,6 +106,7 @@ def train_SPDC(model,
         train_loss /= len(train_loader)
 
         if validate:
+            equation_dict["chi"] = chi_orignial 
             validation_loss = eval_SPDC(
                                         model=model,
                                         dataloader=val_dataloader,
@@ -187,9 +188,9 @@ def eval_SPDC(model,
     model.eval()
     nout = config['data']['nout']
     grad = config['model']['grad']
-    equation_dict_orignial = equation_dict
+    
+    chi_orignial = equation_dict["chi"]
     subsample_nxy = None
-
     if config["data"].get("subsample_xy") is not None:
         subsample_nxy = config["data"]["subsample_xy"]
 
@@ -207,11 +208,10 @@ def eval_SPDC(model,
         torch.cuda.empty_cache()
 
         if subsample_nxy is not None:
-            equation_dict = equation_dict_orignial.copy()
-            chi = equation_dict["chi"]
-            chi = chi.reshape(1,chi.size(0),chi.size(1),chi.size(2))
-            x,y,chi = subsample_xy([x,y,chi],subsample_nxy,subsample_nxy)
-            equation_dict["chi"] = chi.reshape(chi.size(1),chi.size(2),chi.size(3))
+                chi = chi_orignial
+                chi = chi.reshape(1,chi.size(0),chi.size(1),chi.size(2))
+                x,y,chi = subsample_xy([x,y,chi],subsample_nxy,subsample_nxy)
+                equation_dict["chi"] = chi.reshape(chi.size(1),chi.size(2),chi.size(3))
         
         x, y = x.to(device), y.to(device)
         x_in = F.pad(x,(0,0,0,padding),"constant",0)
