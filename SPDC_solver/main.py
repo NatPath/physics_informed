@@ -1,21 +1,22 @@
 from SPDC_solver import *
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import cm
+from argparse import ArgumentParser
 import pickle
+from tqdm import tqdm
 
-with open(file='/home/dor-hay.sha/project/data/spdc/fixed_pump_10.bin',mode="rb") as file:
-    dict = pickle.load(file)
-fields = dict["fields"]
+seed = 1702
+np.random.seed(seed)
+config = Config(pump_waist=80e-6)
 
-dict = {0:"pump", 1:"signal vac", 2:"idler vac", 3:"signal out", 4:"idler out"}
-maxX = 120e-6
-dx = 2e-6
-x = np.arange(-maxX, maxX, dx)
-X,Y = np.meshgrid(x,x)
-for i in range(5):
-    fig, ax = plt.subplots(dpi=150,subplot_kw={"projection": "3d"})
-    surf = ax.plot_surface(X, Y, np.mean(np.abs(fields[:,i,:,:,-1])**2,axis=0), cmap=cm.coolwarm,linewidth=0, antialiased=False)
-    fig.colorbar(surf, shrink=0.5, aspect=5)
-    plt.title(f"{dict[i]}")
-plt.show()
+max_mode1 = 3
+max_mode2 = 3
+total_modes = max_mode1*(2*max_mode2+1)
+coeff = np.random.rand(2,total_modes)
+pump_coef = {"max_mode1": max_mode1, 
+"max_mode2":max_mode2, 
+"real_coef":coeff[0],
+"img_coef":coeff[1]}
+A = SPDC_solver(N=100,config=config,pump_coef=pump_coef,data_creation=True,draw_sol=True)
+A.solve()
+
+print("Done!")
