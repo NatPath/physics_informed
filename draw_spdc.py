@@ -40,8 +40,8 @@ def plot_av_sol(u,y,ckpt_name):
             plt.savefig(f"tmp_fig/{ckpt_name}-{dict[i]}-{src}.jpg")
 
     #calculate emd
-    emd_signal=emd.emd(pic[0],pic[2])
-    emd_idler=emd.emd(pic[1],pic[3])
+    emd_signal=emd.emd(pics[0],pics[2])
+    emd_idler=emd.emd(pics[1],pics[3])
     print(f'emd signal is {emd_signal}')
     print(f'emd idler is {emd_idler}')
 
