@@ -33,7 +33,7 @@ def plot_av_sol(u,y,ckpt_name):
         for i in range(2):
             fig, ax = plt.subplots(dpi=150,subplot_kw={"projection": "3d"})
             pic=np.mean(np.abs(sol[...,-1,i])**2,axis=0) 
-            pics.append(pic)
+            pics.append(pic/np.sum(pic))
             surf = ax.plot_surface(X, Y, pic, cmap=cm.coolwarm,linewidth=0, antialiased=False)
             fig.colorbar(surf, shrink=0.5, aspect=5)
             plt.title(f"{dict[i]}-{src}")
@@ -86,17 +86,18 @@ def draw_SPDC(model,
     else:
         pbar = dataloader
 
-    total_out = torch.tensor([])
-    total_y = torch.tensor([])
+    total_out = torch.tensor([],device="cpu")
+    total_y = torch.tensor([],device="cpu")
     for x, y in pbar:
         gc.collect()
         torch.cuda.empty_cache()
         x, y = x.to(device), y.to(device)
         x_in = F.pad(x,(0,0,0,padding),"constant",0)
         out = model(x_in).reshape(dataloader.batch_size,y.size(1),y.size(2),y.size(3) + padding, 2*nout)
+        out, y, x = out.to("cpu"), y.to("cpu"), x.to("cpu")
             # out = out[...,:-padding,:, :] # if padding is not 0
-        total_out = torch.cat((total_out,out.to("cpu")),dim=0)
-        total_y = torch.cat((total_y,y.to("cpu")),dim=0)
+        total_out = torch.cat((total_out,out),dim=0).to("cpu")
+        total_y = torch.cat((total_y,y),dim=0).to("cpu")
     plot_av_sol(total_out,total_y,ckpt_name)
     # plot_singel_sol(total_out,total_y,1,ckpt_name)
 
