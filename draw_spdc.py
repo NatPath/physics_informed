@@ -12,10 +12,50 @@ import gc
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import os
-import emd
+import draw_utils 
 
 
-def plot_av_sol(u,y,ckpt_name):
+def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt',results_dir='default_dir_name'):
+    # y = torch.ones_like(y)
+    N,nx,ny,nz,u_nfields = u.shape
+    y_nfields = y.shape[4]
+    u = u.reshape(N,nx, ny, nz,2,u_nfields//2)
+    y = y.reshape(N,nx, ny, nz,2,y_nfields//2)[...,-2:]
+    u = (u[...,0,:] + 1j*u[...,1,:]).detach().numpy()
+    y = (y[...,0,:] + 1j*y[...,1,:]).detach().numpy()
+    pics=[]
+    dict = {0:"signal out", 1:"idler out"}
+    maxXY = 120e-6
+    XY = u.shape[1]
+    xy = np.linspace(-maxXY, maxXY, XY + 1)[:-1]
+    X,Y = np.meshgrid(xy,xy)
+    for sol,src in zip([u,y],["prediction", "grt"]):
+        for i in range(2):
+            fig, ax = plt.subplots(dpi=150,subplot_kw={"projection": "3d"})
+            pic=np.mean(np.abs(sol[...,z,i])**2,axis=0) 
+            sum_pic=np.sum(pic)
+            pics.append(pic/sum_pic)
+            surf = ax.plot_surface(X, Y, pic, cmap=cm.coolwarm,linewidth=0, antialiased=False)
+            fig.colorbar(surf, shrink=0.5, aspect=5)
+            plt.title(f"{dict[i]}-{src}")
+            plt.savefig(f"{results_dir}/{ckpt_name}-{dict[i]}-{src}.jpg")
+
+    #calculate emd
+    emd_signal=draw_utils.emd(pics[0],pics[2])
+    emd_idler=draw_utils.emd(pics[1],pics[3])
+    print(f'emd signal is {emd_signal}')
+    print(f'emd idler is {emd_idler}')
+
+    plots = [(X, Y, pics[0]), (X, Y, pics[2]), (X, Y, pics[1]), (X, Y, pics[3])]
+    row_names = ['signal', 'idler']
+    col_names = ['prediction', 'grt','emd']
+    numbers = [emd_signal, emd_idler]
+    title=f'{ckpt_name} predicts {results_dir} on z={z}'
+    save_name=f'all_results_together_z={z}'
+
+    draw_utils.plot_3d_grid(title,plots, row_names, col_names, numbers,results_dir,save_name)
+
+def plot_av_sol_old(u,y,ckpt_name):
     # y = torch.ones_like(y)
     N,nx,ny,nz,u_nfields = u.shape
     y_nfields = y.shape[4]
@@ -40,8 +80,8 @@ def plot_av_sol(u,y,ckpt_name):
             plt.savefig(f"tmp_fig/{ckpt_name}-{dict[i]}-{src}.jpg")
 
     #calculate emd
-    emd_signal=emd.emd(pics[0],pics[2])
-    emd_idler=emd.emd(pics[1],pics[3])
+    emd_signal=draw_utils.emd(pics[0],pics[2])
+    emd_idler=draw_utils.emd(pics[1],pics[3])
     print(f'emd signal is {emd_signal}')
     print(f'emd idler is {emd_idler}')
 
@@ -76,7 +116,8 @@ def draw_SPDC(model,
                  equation_dict,
                  device,
                  padding = 0,
-                 use_tqdm=True):
+                 use_tqdm=True,
+                 test_name='tmp_test_name'):
     model.eval()
     nout = config['data']['nout']
     ckpt_path=config['test']['ckpt']
@@ -98,7 +139,14 @@ def draw_SPDC(model,
             # out = out[...,:-padding,:, :] # if padding is not 0
         total_out = torch.cat((total_out,out),dim=0).to("cpu")
         total_y = torch.cat((total_y,y),dim=0).to("cpu")
-    plot_av_sol(total_out,total_y,ckpt_name)
+
+    script_dir=os.path.dirname(__file__)
+    results_dir_name=f'draw_spdc_results/{test_name}'
+    results_dir=os.path.join(script_dir,results_dir_name)
+    if not os.path.isdir(results_dir):
+        os.makedirs(results_dir)
+    for z in range(10):
+        plot_av_sol(total_out,total_y,z,ckpt_name,results_dir)
     # plot_singel_sol(total_out,total_y,1,ckpt_name)
 
 
@@ -140,7 +188,12 @@ def run(args, config):
         ckpt = torch.load(ckpt_path)
         model.load_state_dict(ckpt['model'])
         print('Weights loaded from %s' % ckpt_path)
-    draw_SPDC(model=model,dataloader=dataloader, config=config, equation_dict=equation_dict, device=device)
+    
+    if 'test_name' in config['test']:
+        test_name=config['test_name']
+    else:
+        test_name='tmp_test_name'
+    draw_SPDC(model=model,dataloader=dataloader, config=config, equation_dict=equation_dict, device=device,test_name=test_name)
 
 
 if __name__ == '__main__':
