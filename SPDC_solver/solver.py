@@ -99,13 +99,13 @@ def crystal_prop(
     if data is not None:
         assert data.shape == (N, 5, Nx, Ny, Nz)
         data[:, 0, :, :, 0] = np.tile(pump_profile, reps=(N, 1, 1))  # pump
-        data[:, 1, :, :, 0] = signal_vac
-        data[:, 2, :, :, 0] = idler_vac
-        data[:, 3, :, :, 0] = signal_out
-        data[:, 4, :, :, 0] = idler_out
+        data[:, 1, :, :, 0] = signal_vac.copy()
+        data[:, 2, :, :, 0] = idler_vac.copy()
+        data[:, 3, :, :, 0] = signal_out.copy()
+        data[:, 4, :, :, 0] = idler_out.copy()
         
 
-    for i in range(shape.Nz):
+    for i in range(shape.Nz-1):
 
         A = propagate_dz(
             pump_profile=pump_profile,
@@ -135,12 +135,12 @@ def crystal_prop(
         else:
             signal_out, signal_vac, idler_out, idler_vac, E_pump = A
 
-    if data is not None:
-        data[:, 0, :, :, i] = E_pump
-        data[:, 1, :, :, i] = signal_vac
-        data[:, 2, :, :, i] = idler_vac
-        data[:, 3, :, :, i] = signal_out
-        data[:, 4, :, :, i] = idler_out
+        if data is not None:
+            data[:, 0, :, :, i+1] = E_pump.copy()
+            data[:, 1, :, :, i+1] = signal_vac.copy()
+            data[:, 2, :, :, i+1] = idler_vac.copy()
+            data[:, 3, :, :, i+1] = signal_out.copy()
+            data[:, 4, :, :, i+1] = idler_out.copy()
         
 
     if return_err:
