@@ -25,7 +25,7 @@ def emd(image1,image2):
     return res[0]
 
 def plot_3d_grid(title,plots, row_names, col_names, numbers,results_dir,save_name):
-    fig = plt.figure(figsize=(10, 8))
+    fig = plt.figure(figsize=(10, 8),dpi=200)
     fig.suptitle(title)
     grid = plt.GridSpec(3, 4, wspace=0.4, hspace=0.3)
     for i in range(2):

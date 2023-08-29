@@ -17,6 +17,9 @@ import draw_utils
 
 def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt',results_dir='default_dir_name'):
     # y = torch.ones_like(y)
+    results_dir=results_dir+f'/{ckpt_name}'
+    if not os.path.isdir(results_dir):
+        os.makedirs(results_dir)
     N,nx,ny,nz,u_nfields = u.shape
     y_nfields = y.shape[4]
     u = u.reshape(N,nx, ny, nz,2,u_nfields//2)
@@ -29,6 +32,7 @@ def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt',results_dir='default_dir_name')
     XY = u.shape[1]
     xy = np.linspace(-maxXY, maxXY, XY + 1)[:-1]
     X,Y = np.meshgrid(xy,xy)
+    
     for sol,src in zip([u,y],["prediction", "grt"]):
         for i in range(2):
             fig, ax = plt.subplots(dpi=150,subplot_kw={"projection": "3d"})
@@ -38,7 +42,7 @@ def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt',results_dir='default_dir_name')
             surf = ax.plot_surface(X, Y, pic, cmap=cm.coolwarm,linewidth=0, antialiased=False)
             fig.colorbar(surf, shrink=0.5, aspect=5)
             plt.title(f"{dict[i]}-{src}")
-            plt.savefig(f"{results_dir}/{ckpt_name}/{dict[i]}-{src}.jpg")
+            plt.savefig(f"{results_dir}/{dict[i]}-{src}.jpg")
 
     #calculate emd
     emd_signal=draw_utils.emd(pics[0],pics[2])
@@ -51,7 +55,7 @@ def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt',results_dir='default_dir_name')
     numbers = [emd_signal, emd_idler]
     title=f'{ckpt_name} predicts {results_dir} on z={z}'
     save_name=f'all_results_together_z={z}'
-    results_dir=results_dir+f'/{ckpt_name}'
+    
     draw_utils.plot_3d_grid(title,plots, row_names, col_names, numbers,results_dir,save_name)
 
 def plot_av_sol_old(u,y,ckpt_name):
