@@ -7,23 +7,23 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 
 
-config = Config(pump_waist=80e-6)
-A = SPDC_solver(N=500,config=config,data_creation=True)
-A.solve()
-dict = ["pump","signal_vac", "idler_vac", "signal_out", "idler_out"]
-X,Y = np.meshgrid(A.shape.x,A.shape.y, indexing='ij')
-for z in range(10):
-    for i in range(5):
-            if True:
-                        fig, ax = plt.subplots(dpi=150,subplot_kw={"projection": "3d"})
-                        surf = ax.plot_surface(X, Y, np.mean(np.abs(A.data["fields"][:,i,:,:,z])**2,axis=0), cmap=cm.coolwarm,linewidth=0, antialiased=False)
-                        fig.colorbar(surf, shrink=0.5, aspect=5)
-                        plt.title(f"{dict[i]}")
-                        plt.savefig(f"{dict[i]}_z={z}.jpg")
-                        plt.close()
+# config = Config(pump_waist=80e-6)
+# A = SPDC_solver(N=500,config=config,data_creation=True)
+# A.solve()
+# dict = ["pump","signal_vac", "idler_vac", "signal_out", "idler_out"]
+# X,Y = np.meshgrid(A.shape.x,A.shape.y, indexing='ij')
+# for z in range(10):
+#     for i in range(5):
+#             if True:
+#                         fig, ax = plt.subplots(dpi=150,subplot_kw={"projection": "3d"})
+#                         surf = ax.plot_surface(X, Y, np.mean(np.abs(A.data["fields"][:,i,:,:,z])**2,axis=0), cmap=cm.coolwarm,linewidth=0, antialiased=False)
+#                         fig.colorbar(surf, shrink=0.5, aspect=5)
+#                         plt.title(f"{dict[i]}")
+#                         plt.savefig(f"{dict[i]}_z={z}.jpg")
+#                         plt.close()
 
-print("Done!")
-exit()
+# print("Done!")
+# exit()
 
 np.random.seed(1701)
 max_mode = 5
