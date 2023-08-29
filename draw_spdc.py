@@ -38,13 +38,12 @@ def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt',results_dir='default_dir_name')
             surf = ax.plot_surface(X, Y, pic, cmap=cm.coolwarm,linewidth=0, antialiased=False)
             fig.colorbar(surf, shrink=0.5, aspect=5)
             plt.title(f"{dict[i]}-{src}")
-            plt.savefig(f"{results_dir}/{ckpt_name}-{dict[i]}-{src}.jpg")
+            plt.savefig(f"{results_dir}/{ckpt_name}/{dict[i]}-{src}.jpg")
 
     #calculate emd
     emd_signal=draw_utils.emd(pics[0],pics[2])
     emd_idler=draw_utils.emd(pics[1],pics[3])
-    print(f'emd signal is {emd_signal}')
-    print(f'emd idler is {emd_idler}')
+
 
     plots = [(X, Y, pics[0]), (X, Y, pics[2]), (X, Y, pics[1]), (X, Y, pics[3])]
     row_names = ['signal', 'idler']
@@ -52,7 +51,7 @@ def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt',results_dir='default_dir_name')
     numbers = [emd_signal, emd_idler]
     title=f'{ckpt_name} predicts {results_dir} on z={z}'
     save_name=f'all_results_together_z={z}'
-
+    results_dir=results_dir+f'/{ckpt_name}'
     draw_utils.plot_3d_grid(title,plots, row_names, col_names, numbers,results_dir,save_name)
 
 def plot_av_sol_old(u,y,ckpt_name):
@@ -190,7 +189,7 @@ def run(args, config):
         print('Weights loaded from %s' % ckpt_path)
     
     if 'test_name' in config['test']:
-        test_name=config['test_name']
+        test_name=config['test']['test_name']
     else:
         test_name='tmp_test_name'
     draw_SPDC(model=model,dataloader=dataloader, config=config, equation_dict=equation_dict, device=device,test_name=test_name)

@@ -25,3 +25,4 @@ configs/ngc/SPDC-pino-tmp.yaml
 slurm_script/pino-tmp.sh
 configs/ngc/SPDC-pino-tmp.yaml
 slurm_script/pino-tmp.sh
+draw_spdc_results/*

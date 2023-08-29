@@ -16,7 +16,6 @@ def image_to_signature(image):
 def emd(image1,image2):
     sum1=np.sum(image1)
     sum2=np.sum(image2)
-    print(f'sums are {sum1} and {sum2}')
     if sum1 ==0 or sum2 == 0 or np.isnan(sum1) or np.isnan(sum2):
         print('one of the images is all zeros or nan \n emd will be set to -1')
         return -1
