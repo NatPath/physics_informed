@@ -16,7 +16,6 @@ def image_to_signature(image):
 def emd(image1,image2):
     sum1=np.sum(image1)
     sum2=np.sum(image2)
-    print(f'sums are {sum1} and {sum2}')
     if sum1 ==0 or sum2 == 0 or np.isnan(sum1) or np.isnan(sum2):
         print('one of the images is all zeros or nan \n emd will be set to -1')
         return -1
@@ -26,7 +25,7 @@ def emd(image1,image2):
     return res[0]
 
 def plot_3d_grid(title,plots, row_names, col_names, numbers,results_dir,save_name):
-    fig = plt.figure(figsize=(10, 8))
+    fig = plt.figure(figsize=(10, 8),dpi=200)
     fig.suptitle(title)
     grid = plt.GridSpec(3, 4, wspace=0.4, hspace=0.3)
     for i in range(2):

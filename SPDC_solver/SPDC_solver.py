@@ -146,11 +146,12 @@ class SPDC_solver(object):
                         n = {0:self.signal.n, 1:self.signal.n, 2:self.idler.n, 3:self.idler.n}
                         X,Y = np.meshgrid(self.shape.x,self.shape.y, indexing='ij')
                         for i in range(4):
-                                if (i%1==0):
+                                if (i%2==0):
                                          fig, ax = plt.subplots(dpi=150,subplot_kw={"projection": "3d"})
                                          surf = ax.plot_surface(X, Y, np.mean(I(sol[i],n[i]),axis=0), cmap=cm.coolwarm,linewidth=0, antialiased=False)
                                          fig.colorbar(surf, shrink=0.5, aspect=5)
                                          plt.title(f"{dict[i]}")
+                                         plt.savefig(f"{dict[i]}.jpg")
                         plt.show()
 
                 if self.return_err:
