@@ -38,7 +38,7 @@ def train_SPDC(model,
         else:
             id=wandb.util.generate_id()
         run = wandb.init(id=id,
-                         name=config['train']['save_name'][:-3],
+                         name=config['train']['save_name'][:-3]+f'_id_{id}',
                          project=project,
                          entity=config['log']['entity'],
                          group=group,
