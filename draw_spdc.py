@@ -13,7 +13,23 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import os
 import draw_utils 
+import wandb
 
+
+def draw_spdc_from_train(config,save_name,model,first_pump_dl,device,train_or_validate):
+    fake_config={'data':{'nout':config['data']['nout']},'test':{'ckpt':save_name}}
+    draw_SPDC(model,first_pump_dl,fake_config,{},device,test_name=f'train_first_pump_id_{id}')
+    idler_pred_image_loc=f'draw_spdc_results/{train_or_validate}_first_pump_id_{id}/idler-prediction.jpg'
+    signal_pred_image_loc=f'draw_spdc_results/{train_or_validate}_first_pump_id_{id}/signal-prediction.jpg'
+    idler_grt_image_loc=f'draw_spdc_results/{train_or_validate}_first_pump_id_{id}/idler-grt.jpg'
+    signal_grt_image_loc=f'draw_spdc_results/{train_or_validate}_first_pump_id_{id}/signal-grt.jpg'
+    wandb.log({f"idler_pred_{train_or_validate}ed_on":wandb.Image(idler_pred_image_loc)})
+    wandb.log({f"signal_pred_{train_or_validate}ed_on":wandb.Image(signal_pred_image_loc)})
+    wandb.log({f"idler_grt_{train_or_validate}ed_on":wandb.Image(idler_grt_image_loc)})
+    wandb.log({f"signal_grt_{train_or_validate}ed_on":wandb.Image(signal_grt_image_loc)})
+    for z in range(10):
+        results_together_i_loc=f'draw_spdc_resukts/{train_or_validate}_first_pump_id_{id}/all_results_together_z={z}'
+        wandb.log({f"results_together z={z} {train_or_validate}ed on":wandb.Image(results_together_i_loc)})
 
 def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt',results_dir='default_dir_name',emd=True):
     # y = torch.ones_like(y)

@@ -24,8 +24,8 @@ def train_SPDC(model,
                     log=False,
                     validate=False,
                     val_dataloader = None,
-                    train_first_10_dl = None,
-                    val_first_10_dl = None,
+                    train_first_pump_dl = None,
+                    val_first_pump_dl = None,
                     padding = 0,
                     project='PINO-3d-default',
                     group='default',
@@ -33,8 +33,8 @@ def train_SPDC(model,
                     use_tqdm=True):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     if wandb and log:
-        if 'id' in config['test']:
-            id=config['test']['id']
+        if 'id' in config['train']:
+            id=config['train']['id']
         else:
             id=wandb.util.generate_id()
         run = wandb.init(id=id,
@@ -138,6 +138,7 @@ def train_SPDC(model,
                 save_checkpoint(config['train']['save_dir'],
                                 config['train']['save_name'].replace('.pt', f'_best_validation_yet.pt'),
                                 model, optimizer)
+                wandb.log({'Minimum Validation (data) L2 loss': min_valid_loss})
 
             if use_tqdm:
                 pbar.set_description(
@@ -183,31 +184,8 @@ def train_SPDC(model,
                             model, optimizer)
             #small spagheti, excuse me..
             #overall it draws the images and sends them to wandb (only in some epochs)
-            fake_config={'data':{'nout':config['data']['nout']},'test':{'ckpt':tmp_save_name}}
-            draw_spdc.draw_SPDC(model,train_first_10_dl,fake_config,{},device,test_name=f'train_first_10_id_{id}')
-            idler_pred_trained_image_loc=f'draw_spdc_results/train_first_10_id_{id}/idler-prediction.jpg'
-            signal_pred_trained_image_loc=f'draw_spdc_results/train_first_10_id_{id}/signal-prediction.jpg'
-            idler_grt_trained_image_loc=f'draw_spdc_results/train_first_10_id_{id}/idler-grt.jpg'
-            signal_grt_trained_image_loc=f'draw_spdc_results/train_first_10_id_{id}/signal-grt.jpg'
-            wandb.log({"idler_pred_trained_on":wandb.Image(idler_pred_trained_image_loc)})
-            wandb.log({"signal_pred_trained_on":wandb.Image(signal_pred_trained_image_loc)})
-            wandb.log({"idler_grt_trained_on":wandb.Image(idler_grt_trained_image_loc)})
-            wandb.log({"signal_grt_trained_on":wandb.Image(signal_grt_trained_image_loc)})
-            for z in range(10):
-                results_together_i_loc=f'draw_spdc_resukts/train_first_10_id_{id}/all_results_together_z={z}'
-                wandb.log({f"results_together z={z} trained on":wandb.Image(results_together_i_loc)})
-            draw_spdc.draw_SPDC(model,val_first_10_dl,fake_config,{},device,test_name=f'val_first_10_id_{id}')
-            idler_pred_val_image_loc=f'draw_spdc_results/val_first_10_id_{id}/idler-prediction.jpg'
-            signal_pred_val_image_loc=f'draw_spdc_results/val_first_10_id_{id}/signal-prediction.jpg'
-            idler_grt_val_image_loc=f'draw_spdc_results/val_first_10_id_{id}/idler-grt.jpg'
-            signal_grt_val_image_loc=f'draw_spdc_results/val_first_10_id_{id}/signal-grt.jpg'
-            wandb.log({"idler_pred_val":wandb.Image(idler_pred_val_image_loc)})
-            wandb.log({"signal_pred_val":wandb.Image(signal_pred_val_image_loc)})
-            wandb.log({"idler_grt_val":wandb.Image(idler_grt_val_image_loc)})
-            wandb.log({"signal_grt_val":wandb.Image(signal_grt_val_image_loc)})
-            for z in range(10):
-                results_together_i_loc=f'draw_spdc_resukts/val_first_10_id_{id}/all_results_together_z={z}'
-                wandb.log({f"results_together z={z} val":wandb.Image(results_together_i_loc)})
+            draw_spdc.draw_spdc_from_train(config,tmp_save_name,model,train_first_pump_dl,device,id,dl_train_or_validate='val')
+            draw_spdc.draw_spdc_from_train(config,tmp_save_name,model, val_first_pump_dl,device,id,dl_train_or_validate='train')
         if train_loss < min_train_loss:
             min_train_loss=train_loss
             save_checkpoint(config['train']['save_dir'],
@@ -217,7 +195,9 @@ def train_SPDC(model,
     save_checkpoint(config['train']['save_dir'],
                     config['train']['save_name'],
                     model, optimizer)
-    
+    draw_spdc.draw_spdc_from_train(config,tmp_save_name,model,train_first_pump_dl,device,id,dl_train_or_validate='val')
+    draw_spdc.draw_spdc_from_train(config,tmp_save_name,model, val_first_pump_dl,device,id,dl_train_or_validate='train')
+
     print('Done!')
 
 
@@ -360,7 +340,7 @@ def run(args, config):
     train_loader = dataset.make_loader(n_sample=data_config['n_sample'],
                                        batch_size=config['train']['batchsize'],
                                        start=data_config['offset'],train=True)
-    train_first_10_dl=dataset.make_loader(n_sample=10,
+    train_first_pump_dl=dataset.make_loader(n_sample=data_config['spp'],
                                           batch_size=1,
                                           start=0,
                                           train=False)
@@ -370,7 +350,7 @@ def run(args, config):
                                      n_sample=data_config['total_num'] - data_config['n_sample'],
                                      batch_size=config['train']['batchsize'],
                                      start=data_config['n_sample'],train=False)
-        val_first_10_dl=dataset.make_loader(n_sample=10,
+        val_first_pump_dl=dataset.make_loader(n_sample=data_config['spp'],
                                             batch_size=1,
                                             start=data_config['n_sample'],
                                             train=False)
@@ -402,8 +382,8 @@ def run(args, config):
                     tags=config['log']['tags'],
                     validate=args.validate,
                     val_dataloader=val_dataloader,
-                    train_first_10_dl=train_first_10_dl,
-                    val_first_10_dl=val_first_10_dl)
+                    train_first_pump_dl=train_first_pump_dl,
+                    val_first_pump_dl=val_first_pump_dl)
 
 def test(config):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
