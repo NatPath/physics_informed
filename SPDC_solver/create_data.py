@@ -94,7 +94,7 @@ def fixed_pump(N_samples, config ,spp = None, loc = None):
 
 def fixed_pump_single_mode(N_samples, config ,p,l, loc = None):
     default_loc = "/home/dor-hay.sha/project/data/spdc"
-    file_name = str(f"single_mode_N-{N_samples}.bin")
+    file_name = str(f"single_mode-({p},{l})_N-{N_samples}.bin")
     if loc is not None:
         file_name = str(f"{loc}/{file_name}")
     else:
