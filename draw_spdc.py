@@ -15,7 +15,7 @@ import os
 import draw_utils 
 
 
-def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt',results_dir='default_dir_name'):
+def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt',results_dir='default_dir_name',emd=True):
     # y = torch.ones_like(y)
     results_dir=results_dir+f'/{ckpt_name}'
     if not os.path.isdir(results_dir):
@@ -45,9 +45,13 @@ def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt',results_dir='default_dir_name')
             plt.savefig(f"{results_dir}/{dict[i]}-{src}.jpg")
 
     #calculate emd
-    emd_signal=draw_utils.emd(pics[0],pics[2])
-    emd_idler=draw_utils.emd(pics[1],pics[3])
-
+    # EMD ==-1 means an uncalculable emd, emd==-2 means it wasn't calculated intentionally
+    if emd:
+        emd_signal=draw_utils.emd(pics[0],pics[2])
+        emd_idler=draw_utils.emd(pics[1],pics[3])
+    else:
+        emd_signal=-2
+        emd_idler=-2
 
     plots = [(X, Y, pics[0]), (X, Y, pics[2]), (X, Y, pics[1]), (X, Y, pics[3])]
     row_names = ['signal', 'idler']
@@ -120,7 +124,8 @@ def draw_SPDC(model,
                  device,
                  padding = 0,
                  use_tqdm=True,
-                 test_name='tmp_test_name'):
+                 test_name='tmp_test_name',
+                 emd=True):
     model.eval()
     nout = config['data']['nout']
     ckpt_path=config['test']['ckpt']
@@ -196,12 +201,14 @@ def run(args, config):
         test_name=config['test']['test_name']
     else:
         test_name='tmp_test_name'
-    draw_SPDC(model=model,dataloader=dataloader, config=config, equation_dict=equation_dict, device=device,test_name=test_name)
+    
+    draw_SPDC(model=model,dataloader=dataloader, config=config, equation_dict=equation_dict, device=device,test_name=test_name,emd=not args.emd_off)
 
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='Basic paser')
     parser.add_argument('--config_path', type=str, help='Path to the configuration file')
+    parser.add_argument('--emd_off', action='store_true', help='Turn on the EMD calculation')
     args = parser.parse_args()
 
     config_file = args.config_path
