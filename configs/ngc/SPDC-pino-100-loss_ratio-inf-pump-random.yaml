@@ -1,6 +1,6 @@
 data:
   name: spdc
-  datapath: '/home/dor-hay.sha/project/data/spdc/random_pump_N-100_spp-10.bin'
+  datapath: '/home/dor-hay.sha/project/data/spdc/random_pump_N-100_seed-1701_spp-1.bin'
   total_num: 100
   offset: 0
   n_sample: 80
@@ -26,7 +26,7 @@ model:
 
 train:
   batchsize: 4
-  epochs: 500
+  epochs: 1500
   milestones: [150, 300, 450]
   base_lr: 0.001
   scheduler_gamma: 0.5
@@ -34,11 +34,11 @@ train:
   f_loss: 0.0
   xy_loss: 1.0
   save_dir: 'spdc-FDM'
-  save_name: 'spdc-pump_r-N_100-r_inf.pt'
+  save_name: 'spdc-pump_r-N_100-r_inf_spp-1.pt'
 
 log:
   project: PINO-spdc-test
   group: ml4physics_spdc
   entity: ml4physics_spdc
-  tags: ["random pump", "ratio-inf","N-100"]
+  tags: ["random pump", "ratio-inf","N-100", "spp-1"]
 
