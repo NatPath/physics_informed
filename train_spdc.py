@@ -185,7 +185,9 @@ def train_SPDC(model,
             #small spagheti, excuse me..
             #overall it draws the images and sends them to wandb (only in some epochs)
             draw_spdc.draw_spdc_from_train(config,tmp_save_name,model,train_first_pump_dl,device,id,train_or_validate='train')
+            print('finished first draw_spdc for first train pump')
             draw_spdc.draw_spdc_from_train(config,tmp_save_name,model, val_first_pump_dl,device,id,train_or_validate='val')
+            print('finished first draw_spdc for first validation pump')
         if train_loss < min_train_loss:
             min_train_loss=train_loss
             save_checkpoint(config['train']['save_dir'],
@@ -341,7 +343,7 @@ def run(args, config):
                                        batch_size=config['train']['batchsize'],
                                        start=data_config['offset'],train=True)
     train_first_pump_dl=dataset.make_loader(n_sample=data_config['spp'],
-                                          batch_size=1,
+                                          batch_size=config['train']['batchsize'],
                                           start=0,
                                           train=False)
     val_dataloader = None
@@ -350,10 +352,11 @@ def run(args, config):
                                      n_sample=data_config['total_num'] - data_config['n_sample'],
                                      batch_size=config['train']['batchsize'],
                                      start=data_config['n_sample'],train=False)
-        val_first_pump_dl=dataset.make_loader(n_sample=data_config['spp'],
-                                            batch_size=1,
-                                            start=data_config['n_sample'],
-                                            train=False)
+        val_first_pump_dl=dataset.make_loader(
+                                        n_sample=data_config['spp'],
+                                        batch_size=config['train']['batchsize'],
+                                        start=data_config['n_sample'],
+                                        train=False)
     del dataset
     gc.collect()
     torch.cuda.empty_cache()

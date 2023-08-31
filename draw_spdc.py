@@ -19,21 +19,21 @@ import wandb
 def draw_spdc_from_train(config,save_name,model,first_pump_dl,device,id,train_or_validate):
     fake_config={'data':{'nout':config['data']['nout']},'test':{'ckpt':save_name}}
     draw_SPDC(model,first_pump_dl,fake_config,{},device,test_name=f'train_first_pump_id_{id}')
-    idler_pred_image_loc=f'draw_spdc_results/{train_or_validate}_first_pump_id_{id}/idler-prediction.jpg'
-    signal_pred_image_loc=f'draw_spdc_results/{train_or_validate}_first_pump_id_{id}/signal-prediction.jpg'
-    idler_grt_image_loc=f'draw_spdc_results/{train_or_validate}_first_pump_id_{id}/idler-grt.jpg'
-    signal_grt_image_loc=f'draw_spdc_results/{train_or_validate}_first_pump_id_{id}/signal-grt.jpg'
+    idler_pred_image_loc=f'draw_spdc_results/{train_or_validate}_first_pump_id_{id}/idler out-prediction.jpg'
+    signal_pred_image_loc=f'draw_spdc_results/{train_or_validate}_first_pump_id_{id}/signal out-prediction.jpg'
+    idler_grt_image_loc=f'draw_spdc_results/{train_or_validate}_first_pump_id_{id}/idler out-grt.jpg'
+    signal_grt_image_loc=f'draw_spdc_results/{train_or_validate}_first_pump_id_{id}/signal out-grt.jpg'
     wandb.log({f"idler_pred_{train_or_validate}ed_on":wandb.Image(idler_pred_image_loc)})
     wandb.log({f"signal_pred_{train_or_validate}ed_on":wandb.Image(signal_pred_image_loc)})
     wandb.log({f"idler_grt_{train_or_validate}ed_on":wandb.Image(idler_grt_image_loc)})
     wandb.log({f"signal_grt_{train_or_validate}ed_on":wandb.Image(signal_grt_image_loc)})
     for z in range(10):
-        results_together_i_loc=f'draw_spdc_resukts/{train_or_validate}_first_pump_id_{id}/all_results_together_z={z}'
+        results_together_i_loc=f'draw_spdc_results/{train_or_validate}_first_pump_id_{id}/all_results_together_z={z}'
         wandb.log({f"results_together z={z} {train_or_validate}ed on":wandb.Image(results_together_i_loc)})
 
-def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt',results_dir='default_dir_name',emd=True):
+def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt.pt',results_dir='default_dir_name',emd=True):
     # y = torch.ones_like(y)
-    results_dir=results_dir+f'/{ckpt_name}'
+    results_dir=results_dir+f'/{ckpt_name[:-3]}'
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
     N,nx,ny,nz,u_nfields = u.shape
@@ -73,7 +73,7 @@ def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt',results_dir='default_dir_name',
     row_names = ['signal', 'idler']
     col_names = ['prediction', 'grt','emd']
     numbers = [emd_signal, emd_idler]
-    title=f'{ckpt_name} predicts {results_dir} on z={z}'
+    title=f'{ckpt_name[:-3]} predicts {results_dir} on z={z}'
     save_name=f'all_results_together_z={z}'
     
     draw_utils.plot_3d_grid(title,plots, row_names, col_names, numbers,results_dir,save_name)
@@ -170,7 +170,7 @@ def draw_SPDC(model,
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
     for z in range(10):
-        plot_av_sol(total_out,total_y,z,ckpt_name,results_dir)
+        plot_av_sol(total_out,total_y,z,ckpt_name,results_dir,emd)
     # plot_singel_sol(total_out,total_y,1,ckpt_name)
 
 
