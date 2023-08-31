@@ -184,8 +184,8 @@ def train_SPDC(model,
                             model, optimizer)
             #small spagheti, excuse me..
             #overall it draws the images and sends them to wandb (only in some epochs)
-            draw_spdc.draw_spdc_from_train(config,tmp_save_name,model,train_first_pump_dl,device,id,dl_train_or_validate='val')
-            draw_spdc.draw_spdc_from_train(config,tmp_save_name,model, val_first_pump_dl,device,id,dl_train_or_validate='train')
+            draw_spdc.draw_spdc_from_train(config,tmp_save_name,model,train_first_pump_dl,device,id,train_or_validate='train')
+            draw_spdc.draw_spdc_from_train(config,tmp_save_name,model, val_first_pump_dl,device,id,train_or_validate='val')
         if train_loss < min_train_loss:
             min_train_loss=train_loss
             save_checkpoint(config['train']['save_dir'],
