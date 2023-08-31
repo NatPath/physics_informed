@@ -17,18 +17,13 @@ import wandb
 
 
 def draw_spdc_from_train(config,save_name,model,first_pump_dl,device,id,train_or_validate):
-    print('printing save name')
-    print(save_name)
     fake_config={'data':{'nout':config['data']['nout']},'test':{'ckpt':save_name}}
     draw_SPDC(model,first_pump_dl,fake_config,{},device,test_name=f'{train_or_validate}_first_pump_id_{id}',emd=False)
-    print('finished first draw_SPDC')
     prefix=f'draw_spdc_results/{train_or_validate}_first_pump_id_{id}/{save_name[:-3]}'
     idler_pred_image_loc=prefix+'/idler out-prediction.jpg'
     signal_pred_image_loc=prefix+'/signal out-prediction.jpg'
     idler_grt_image_loc=prefix+'/idler out-grt.jpg'
     signal_grt_image_loc=prefix+'/signal out-grt.jpg'
-    print('idler grt image loc variable:')
-    print(idler_pred_image_loc)
     wandb.log({f"idler_pred_{train_or_validate}ed_on":wandb.Image(idler_pred_image_loc)})
     wandb.log({f"signal_pred_{train_or_validate}ed_on":wandb.Image(signal_pred_image_loc)})
     wandb.log({f"idler_grt_{train_or_validate}ed_on":wandb.Image(idler_grt_image_loc)})
@@ -69,7 +64,6 @@ def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt.pt',results_dir='default_dir_nam
             plt.title(f"{dict[i]}-{src}")
             plt.savefig(f"{results_dir}/{dict[i]}-{src}.jpg")
 
-    print(f'finished drawing oldschool for z={z}')
     #calculate emd
     # EMD ==-1 means an uncalculable emd, emd==-2 means it wasn't calculated intentionally
     if emd:
@@ -78,7 +72,6 @@ def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt.pt',results_dir='default_dir_nam
     else:
         emd_signal=-2
         emd_idler=-2
-    print(f'finished calculating emds for z={z}')
 
     plots = [(X, Y, pics[0]), (X, Y, pics[2]), (X, Y, pics[1]), (X, Y, pics[3])]
     row_names = ['signal', 'idler']
@@ -88,7 +81,6 @@ def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt.pt',results_dir='default_dir_nam
     save_name=f'all_results_together_z={z}'
     
     draw_utils.plot_3d_grid(title,plots, row_names, col_names, numbers,results_dir,save_name)
-    print(f'done with drawing solution for z= {z}')
 
 def plot_av_sol_old(u,y,ckpt_name):
     # y = torch.ones_like(y)
