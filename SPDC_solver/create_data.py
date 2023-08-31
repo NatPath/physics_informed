@@ -5,13 +5,14 @@ import pickle
 from tqdm import tqdm
 
 
-def single_mode(p,l,config,N_samples):
+def single_mode(p,l,config,N_samples,seed):
     '''
     creates a solution of a single mode of pump given by p,l
     Args:
         p,l - parmeters of the mode
         config - config of the pump
         N_samples - number of vac modes
+        seed - seed for random vacum modes
     Return:
         A.data - The solution tensor
     '''
@@ -22,17 +23,18 @@ def single_mode(p,l,config,N_samples):
     coeffs_arr[idx] = 1
 
     pump_coef = {"max_mode1": max_mode1, "max_mode2":max_mode2, "real_coef":coeffs_arr.real,"img_coef":coeffs_arr.imag}
-    A = SPDC_solver(N=N_samples,config=config,pump_coef=pump_coef,data_creation=True)
+    A = SPDC_solver(N=N_samples,config=config,pump_coef=pump_coef,data_creation=True, seed=seed)
     A.solve()
     return A.data
 
-def multi_modes(config,N_samples,spp):
+def multi_modes(config,N_samples,spp,seed):
     '''
     creates a solution of a single mode with spp vac modes for N_samples//spp modes
     Args:
         config - config of the pump
         N_samples - number of samples in the data
         spp - number of vac modes per pump mode
+        seed - seed for random vacum modes
     Return:
         A.data - The solution tensor
     '''
@@ -43,7 +45,7 @@ def multi_modes(config,N_samples,spp):
 
     while idx < number_of_modes:
         while (row >= 0) and (idx < number_of_modes):
-            data = single_mode(p=row, l=col, config=config ,N_samples=spp)
+            data = single_mode(p=row, l=col, config=config ,N_samples=spp, seed=(seed+idx))
             if idx==0:
                 fields = data["fields"]
             else: 
@@ -65,10 +67,10 @@ def save_data(data,file_name):
     print("Done!")
 
     
-def fixed_pump(N_samples, config ,spp = None, loc = None):
+def fixed_pump(N_samples, config ,spp = None, loc = None, seed = 1701):
 
     default_loc = "/home/dor-hay.sha/project/data/spdc"
-    file_name = str(f"fixed_pump_N-{N_samples}")
+    file_name = str(f"fixed_pump_N-{N_samples}_seed-{seed}")
     if loc is not None:
         file_name = str(f"{loc}/{file_name}")
     else:
@@ -77,7 +79,7 @@ def fixed_pump(N_samples, config ,spp = None, loc = None):
     if spp is None:
         print("Creating data: only one mode, p=0, l=0")
         file_name = file_name + ".bin"
-        A = SPDC_solver(N=N_samples,config=config,data_creation=True)
+        A = SPDC_solver(N=N_samples,config=config,data_creation=True,seed=seed)
         A.solve()
         data = A.data
 
@@ -88,20 +90,20 @@ def fixed_pump(N_samples, config ,spp = None, loc = None):
             raise Exception("Error! (N /spp) is not a round number")
         
         print(f"Creating data: The first {(N_samples // spp)} LG modes")
-        data = multi_modes(config = config, N_samples = N_samples, spp = spp)
+        data = multi_modes(config = config, N_samples = N_samples, spp = spp, seed = seed)
 
     save_data(data,file_name)
 
-def fixed_pump_single_mode(N_samples, config ,p,l, loc = None):
+def fixed_pump_single_mode(N_samples, config ,p,l, loc = None, seed = 1701):
     default_loc = "/home/dor-hay.sha/project/data/spdc"
-    file_name = str(f"single_mode-({p},{l})_N-{N_samples}.bin")
+    file_name = str(f"single_mode-({p},{l})_N-{N_samples}_seed-{seed}.bin")
     if loc is not None:
         file_name = str(f"{loc}/{file_name}")
     else:
         file_name = str(f"{default_loc}/{file_name}")
 
     print(f"Creating data: only a single mode, p={p}, l={l}")
-    data = single_mode(p = p,l = l,config = config,N_samples = N_samples)
+    data = single_mode(p = p,l = l,config = config,N_samples = N_samples, seed = seed)
 
     save_data(data,file_name)
 
@@ -113,9 +115,9 @@ def random_pump(N_samples, config ,spp = 1, max_mode = 5, seed = 1701, loc = Non
 
     default_loc = "/home/dor-hay.sha/project/data/spdc"
     if loc is not None:
-        file_name = str(f"{loc}/random_pump_N-{N_samples}_spp-{spp}.bin")
+        file_name = str(f"{loc}/random_pump_N-{N_samples}_seed-{seed}_spp-{spp}.bin")
     else:
-        file_name = str(f"{default_loc}/random_pump_N-{N_samples}_spp-{spp}.bin")
+        file_name = str(f"{default_loc}/random_pump_N-{N_samples}_seed-{seed}_spp-{spp}.bin")
     
     print(f"creating data: {(N_samples // spp)} random pump modes with max_mode = {max_mode} and seed = {seed}")
 
@@ -138,7 +140,7 @@ def random_pump(N_samples, config ,spp = 1, max_mode = 5, seed = 1701, loc = Non
 
         pump_coef = {"max_mode1": max_mode, "max_mode2":max_mode, "real_coef":coeffs_arr.real,"img_coef":coeffs_arr.imag}
 
-        A = SPDC_solver(N=spp,config=config,pump_coef=pump_coef,data_creation=True)
+        A = SPDC_solver(N=spp,config=config,pump_coef=pump_coef,data_creation=True, seed = (seed + n))
         A.solve()
         if n==0:
             fields = A.data["fields"]
@@ -156,7 +158,7 @@ def random_pump(N_samples, config ,spp = 1, max_mode = 5, seed = 1701, loc = Non
 if __name__ == '__main__':
     parser = ArgumentParser(description='Basic paser')
     parser.add_argument('-N', type=int, default=10, help='Number of samples that will be created (default N=10)')
-    parser.add_argument('--seed', type=int, default=1701, help='Seed for the random pump profile if needed (default seed = 1701)')
+    parser.add_argument('--seed', type=int, default=1701, help='Seed for the random pump profile and the vacum states (default seed = 1701)')
     parser.add_argument('--loc', type=str, help='Location to save the file, if not specifed save at a deafult location')
     parser.add_argument('--mode', type=str, default="fixed", help='Pick mode of data creation from the following:\nfixed - create pure fixed LG modes for pump.\nsingle - create pure fixed single LG modes for pump according to given p,l.\nrandom - create mixed random pump modes.')
     parser.add_argument('--spp', type=int,help='Number of samples that will be created for each pump')
@@ -167,10 +169,10 @@ if __name__ == '__main__':
     config = Config(pump_waist=80e-6)
 
     if args.mode == 'fixed':
-        fixed_pump(N_samples=args.N, config=config, spp=args.spp, loc=args.loc)
+        fixed_pump(N_samples=args.N, config=config, spp=args.spp, loc=args.loc, seed=args.seed)
     
     elif args.mode == 'single':
-        fixed_pump_single_mode(N_samples=args.N, config=config, p=args.p, l=args.l, loc=args.loc)
+        fixed_pump_single_mode(N_samples=args.N, config=config, p=args.p, l=args.l, loc=args.loc, seed=args.seed)
 
     elif args.mode == 'random':
         random_pump(N_samples=args.N, config=config, spp=args.spp, seed=args.seed, loc=args.loc)
