@@ -16,7 +16,7 @@ import draw_utils
 import wandb
 
 
-def draw_spdc_from_train(config,save_name,model,first_pump_dl,device,train_or_validate):
+def draw_spdc_from_train(config,save_name,model,first_pump_dl,device,id,train_or_validate):
     fake_config={'data':{'nout':config['data']['nout']},'test':{'ckpt':save_name}}
     draw_SPDC(model,first_pump_dl,fake_config,{},device,test_name=f'train_first_pump_id_{id}')
     idler_pred_image_loc=f'draw_spdc_results/{train_or_validate}_first_pump_id_{id}/idler-prediction.jpg'
