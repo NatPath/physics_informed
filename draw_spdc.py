@@ -13,11 +13,33 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import os
 import draw_utils 
+import wandb
 
 
-def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt',results_dir='default_dir_name'):
+def draw_spdc_from_train(config,save_name,model,first_pump_dl,device,id,train_or_validate):
+    print('printing save name')
+    print(save_name)
+    fake_config={'data':{'nout':config['data']['nout']},'test':{'ckpt':save_name}}
+    draw_SPDC(model,first_pump_dl,fake_config,{},device,test_name=f'{train_or_validate}_first_pump_id_{id}',emd=False)
+    print('finished first draw_SPDC')
+    prefix=f'draw_spdc_results/{train_or_validate}_first_pump_id_{id}/{save_name[:-3]}'
+    idler_pred_image_loc=prefix+'/idler out-prediction.jpg'
+    signal_pred_image_loc=prefix+'/signal out-prediction.jpg'
+    idler_grt_image_loc=prefix+'/idler out-grt.jpg'
+    signal_grt_image_loc=prefix+'/signal out-grt.jpg'
+    print('idler grt image loc variable:')
+    print(idler_pred_image_loc)
+    wandb.log({f"idler_pred_{train_or_validate}ed_on":wandb.Image(idler_pred_image_loc)})
+    wandb.log({f"signal_pred_{train_or_validate}ed_on":wandb.Image(signal_pred_image_loc)})
+    wandb.log({f"idler_grt_{train_or_validate}ed_on":wandb.Image(idler_grt_image_loc)})
+    wandb.log({f"signal_grt_{train_or_validate}ed_on":wandb.Image(signal_grt_image_loc)})
+    for z in range(10):
+        results_together_i_loc=prefix+f'/all_results_together_z={z}.jpg'
+        wandb.log({f"results_together z={z} {train_or_validate}ed on":wandb.Image(results_together_i_loc)})
+
+def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt.pt',results_dir='default_dir_name',emd=True):
     # y = torch.ones_like(y)
-    results_dir=results_dir+f'/{ckpt_name}'
+    results_dir=results_dir+f'/{ckpt_name[:-3]}'
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
     N,nx,ny,nz,u_nfields = u.shape
@@ -38,25 +60,35 @@ def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt',results_dir='default_dir_name')
             fig, ax = plt.subplots(dpi=150,subplot_kw={"projection": "3d"})
             pic=np.mean(np.abs(sol[...,z,i])**2,axis=0) 
             sum_pic=np.sum(pic)
-            pics.append(pic/sum_pic)
+            if sum_pic == 0:
+                pics.append(pic)
+            else:
+                pics.append(pic/sum_pic)
             surf = ax.plot_surface(X, Y, pic, cmap=cm.coolwarm,linewidth=0, antialiased=False)
             fig.colorbar(surf, shrink=0.5, aspect=5)
             plt.title(f"{dict[i]}-{src}")
             plt.savefig(f"{results_dir}/{dict[i]}-{src}.jpg")
 
+    print(f'finished drawing oldschool for z={z}')
     #calculate emd
-    emd_signal=draw_utils.emd(pics[0],pics[2])
-    emd_idler=draw_utils.emd(pics[1],pics[3])
-
+    # EMD ==-1 means an uncalculable emd, emd==-2 means it wasn't calculated intentionally
+    if emd:
+        emd_signal=draw_utils.emd(pics[0],pics[2])
+        emd_idler=draw_utils.emd(pics[1],pics[3])
+    else:
+        emd_signal=-2
+        emd_idler=-2
+    print(f'finished calculating emds for z={z}')
 
     plots = [(X, Y, pics[0]), (X, Y, pics[2]), (X, Y, pics[1]), (X, Y, pics[3])]
     row_names = ['signal', 'idler']
     col_names = ['prediction', 'grt','emd']
     numbers = [emd_signal, emd_idler]
-    title=f'{ckpt_name} predicts {results_dir} on z={z}'
+    title=f'{ckpt_name[:-3]} predicts {results_dir} on z={z}'
     save_name=f'all_results_together_z={z}'
     
     draw_utils.plot_3d_grid(title,plots, row_names, col_names, numbers,results_dir,save_name)
+    print(f'done with drawing solution for z= {z}')
 
 def plot_av_sol_old(u,y,ckpt_name):
     # y = torch.ones_like(y)
@@ -120,11 +152,13 @@ def draw_SPDC(model,
                  device,
                  padding = 0,
                  use_tqdm=True,
-                 test_name='tmp_test_name'):
+                 test_name='tmp_test_name',
+                 emd=True):
     model.eval()
     nout = config['data']['nout']
     ckpt_path=config['test']['ckpt']
-    ckpt_name=os.path.basename(ckpt_path) 
+    #ckpt_name=os.path.basename(ckpt_path) 
+    ckpt_name=ckpt_path
     if use_tqdm:
         pbar = tqdm(dataloader, dynamic_ncols=True, smoothing=0.05)
     else:
@@ -149,7 +183,8 @@ def draw_SPDC(model,
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
     for z in range(10):
-        plot_av_sol(total_out,total_y,z,ckpt_name,results_dir)
+        print(f'z is {z}')
+        plot_av_sol(total_out,total_y,z,ckpt_name,results_dir,emd)
     # plot_singel_sol(total_out,total_y,1,ckpt_name)
 
 
@@ -196,12 +231,14 @@ def run(args, config):
         test_name=config['test']['test_name']
     else:
         test_name='tmp_test_name'
-    draw_SPDC(model=model,dataloader=dataloader, config=config, equation_dict=equation_dict, device=device,test_name=test_name)
+    
+    draw_SPDC(model=model,dataloader=dataloader, config=config, equation_dict=equation_dict, device=device,test_name=test_name,emd=not args.emd_off)
 
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='Basic paser')
     parser.add_argument('--config_path', type=str, help='Path to the configuration file')
+    parser.add_argument('--emd_off', action='store_true', help='Turn on the EMD calculation')
     args = parser.parse_args()
 
     config_file = args.config_path
