@@ -163,7 +163,7 @@ def draw_SPDC(model,
         torch.cuda.empty_cache()
         x, y = x.to(device), y.to(device)
         x_in = F.pad(x,(0,0,0,padding),"constant",0)
-        out = model(x_in).reshape(dataloader.batch_size,y.size(1),y.size(2),y.size(3) + padding, 2*nout)
+        out = model(x_in).reshape(y.size(0),y.size(1),y.size(2),y.size(3) + padding, 2*nout)
         out, y, x = out.to("cpu"), y.to("cpu"), x.to("cpu")
             # out = out[...,:-padding,:, :] # if padding is not 0
         total_out = torch.cat((total_out,out),dim=0).to("cpu")
