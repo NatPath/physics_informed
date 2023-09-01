@@ -27,3 +27,4 @@ configs/ngc/SPDC-pino-tmp.yaml
 slurm_script/pino-tmp.sh
 draw_spdc_results/*
 configs/test/SPDC-test-tmp_random.yaml
+configs/ngc/SPDC-pino-tmp_sub.yaml

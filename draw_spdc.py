@@ -164,10 +164,10 @@ def draw_SPDC(model,
         x, y = x.to(device), y.to(device)
         x_in = F.pad(x,(0,0,0,padding),"constant",0)
         out = model(x_in).reshape(y.size(0),y.size(1),y.size(2),y.size(3) + padding, 2*nout)
-        out, y, x = out.to("cpu"), y.to("cpu"), x.to("cpu")
+        # out, y, x = out.to("cpu"), y.to("cpu"), x.to("cpu")
             # out = out[...,:-padding,:, :] # if padding is not 0
-        total_out = torch.cat((total_out,out),dim=0).to("cpu")
-        total_y = torch.cat((total_y,y),dim=0).to("cpu")
+        total_out = torch.cat((total_out,out.detach().cpu()),dim=0)
+        total_y = torch.cat((total_y,y.detach().cpu()),dim=0)
 
     script_dir=os.path.dirname(__file__)
     results_dir_name=f'draw_spdc_results/{test_name}'
