@@ -30,7 +30,11 @@ def train_SPDC(model,
                     project='PINO-3d-default',
                     group='default',
                     tags=['default'],
-                    use_tqdm=True):
+                    use_tqdm=True,
+                    e_start=0,
+                    best_val_yet=float('inf')):
+    # e_start: epoch to start counting from, dictated by saved checkpoint loaded from
+    # best_val_yet: dictated by ckptloaded from, if loaded from
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     if wandb and log:
         if 'id' in config['train']:
@@ -72,12 +76,12 @@ def train_SPDC(model,
 
 
     model.train()
-    pbar = range(config['train']['epochs'])
+    pbar = range(e_start,config['train']['epochs'])
     if use_tqdm:
         pbar = tqdm(pbar, dynamic_ncols=True, smoothing=0.1)
 
     min_train_loss=float('inf')
-    min_valid_loss=float('inf')
+    min_valid_loss=min(float('inf'),best_val_yet)
 
     if 'epochs_delta' in config['train']:
         epochs_delta = config['train']['epochs_delta']
@@ -136,9 +140,10 @@ def train_SPDC(model,
             if validation_loss<min_valid_loss:
                 min_valid_loss=validation_loss
                 save_checkpoint(config['train']['save_dir'],
-                                config['train']['save_name'].replace('.pt', f'_best_validation_yet.pt'),
-                                model, optimizer)
-                wandb.log({'Minimum Validation (data) L2 loss': min_valid_loss})
+                                config['train']['save_name'].replace('.pt', f'_id-{id}_best_validation_yet.pt'),
+                                model, optimizer, scheduler,
+                                epoch=e, best_val_yet=min_valid_loss)
+                wandb.log({'Minimum Validation (data) L2 loss': min_valid_loss},commit=False)
 
             if use_tqdm:
                 pbar.set_description(
@@ -178,27 +183,30 @@ def train_SPDC(model,
                 )
 
         if e % epochs_delta == 0:
-            tmp_save_name=config['train']['save_name'].replace('.pt',f'_{e}.pt')
+            tmp_save_name=config['train']['save_name'].replace('.pt',f'_id-{id}_{e}.pt')
             save_checkpoint(config['train']['save_dir'],
                             tmp_save_name,
-                            model, optimizer)
+                            model, optimizer,scheduler,
+                            epoch=e, best_val_yet=min_valid_loss)
             #small spagheti, excuse me..
             #overall it draws the images and sends them to wandb (only in some epochs)
-            draw_spdc.draw_spdc_from_train(config,tmp_save_name,model,train_first_pump_dl,device,id,train_or_validate='train')
-            print('finished first draw_spdc for first train pump')
-            draw_spdc.draw_spdc_from_train(config,tmp_save_name,model, val_first_pump_dl,device,id,train_or_validate='val')
-            print('finished first draw_spdc for first validation pump')
+            if wandb and log:
+                draw_spdc.draw_spdc_from_train(config,tmp_save_name,model,train_first_pump_dl,device,id,train_or_validate='train')
+                draw_spdc.draw_spdc_from_train(config,tmp_save_name,model, val_first_pump_dl,device,id,train_or_validate='val')
         if train_loss < min_train_loss:
             min_train_loss=train_loss
             save_checkpoint(config['train']['save_dir'],
-                            config['train']['save_name'].replace('.pt', f'_best_yet.pt'),
-                            model, optimizer)
+                            config['train']['save_name'].replace('.pt', f'_id-{id}_best_yet.pt'),
+                            model, optimizer,scheduler,
+                            epoch=e, best_val_yet=min_valid_loss)
 
     save_checkpoint(config['train']['save_dir'],
-                    config['train']['save_name'],
-                    model, optimizer)
-    draw_spdc.draw_spdc_from_train(config,tmp_save_name,model,train_first_pump_dl,device,id,dl_train_or_validate='val')
-    draw_spdc.draw_spdc_from_train(config,tmp_save_name,model, val_first_pump_dl,device,id,dl_train_or_validate='train')
+                    config['train']['save_name'].replace('.pt',f'_id-{id}.pt'),
+                    model, optimizer,scheduler,
+                    epoch=e, best_val_yet=min_valid_loss)
+    if wandb and log: 
+        draw_spdc.draw_spdc_from_train(config,tmp_save_name,model,train_first_pump_dl,device,id,dl_train_or_validate='val')
+        draw_spdc.draw_spdc_from_train(config,tmp_save_name,model, val_first_pump_dl,device,id,dl_train_or_validate='train')
 
     print('Done!')
 
@@ -362,16 +370,28 @@ def run(args, config):
     torch.cuda.empty_cache()
 
     # Load from checkpoint
+    e_start=0
+    best_val_yet=float('inf')
     if 'ckpt' in config['train']:
         ckpt_path = config['train']['ckpt']
         ckpt = torch.load(ckpt_path)
         model.load_state_dict(ckpt['model'])
         print('Weights loaded from %s' % ckpt_path)
+        e_start=ckpt['epoch']
+        best_val_yet=ckpt['best_val_yet']
+
     optimizer = Adam(model.parameters(), betas=(0.9, 0.999),
-                     lr=config['train']['base_lr'])
+                    lr=config['train']['base_lr'])
+    if 'ckpt' in config['train']:
+        optimizer.load_state_dict(ckpt['optim'])
+    
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
                                                      milestones=config['train']['milestones'],
                                                      gamma=config['train']['scheduler_gamma'])
+    if 'ckpt' in config['train']:
+        scheduler.load_state_dict(ckpt['scheduler'])
+
+                                                
     train_SPDC(model,
                     train_loader, 
                     optimizer, 
@@ -386,7 +406,9 @@ def run(args, config):
                     validate=args.validate,
                     val_dataloader=val_dataloader,
                     train_first_pump_dl=train_first_pump_dl,
-                    val_first_pump_dl=val_first_pump_dl)
+                    val_first_pump_dl=val_first_pump_dl,
+                    e_start=e_start,
+                    best_val_yet=best_val_yet)
 
 def test(config):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')

@@ -183,7 +183,7 @@ def count_params(net):
     return count
 
 
-def save_checkpoint(path, name, model, optimizer=None):
+def save_checkpoint(path, name, model, optimizer=None, scheduler=None,epoch = 0,best_val_yet=float('inf')):
     ckpt_dir = 'checkpoints/%s/' % path
     if not os.path.exists(ckpt_dir):
         os.makedirs(ckpt_dir)
@@ -196,10 +196,18 @@ def save_checkpoint(path, name, model, optimizer=None):
         optim_dict = optimizer.state_dict()
     else:
         optim_dict = 0.0
+    
+    if scheduler is not None:
+        scheduler_state=scheduler.state_dict()
+    else:
+        scheduler_state = None
 
     torch.save({
         'model': model_state_dict,
-        'optim': optim_dict
+        'optim': optim_dict,
+        'scheduler': scheduler_state,
+        'epoch': epoch,
+        'best_val_yet': best_val_yet
     }, ckpt_dir + name)
     print('Checkpoint is saved at %s' % ckpt_dir + name)
 
