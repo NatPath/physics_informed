@@ -603,7 +603,7 @@ def coupled_wave_eq_PDE_Loss_fourier(u,input,k_arr, kappa_i, kappa_s):
 
     return torch.sum(abs(residual_1))+torch.sum(abs(residual_2))+torch.sum(abs(residual_3))+torch.sum(abs(residual_4))
 
-def SPDC_loss(u,y,input,equation_dict, grad="autograd", crystal_z_weights = 1):
+def SPDC_loss(u,y,input,equation_dict, grad="autograd", crystal_z_weights = torch.tensor(1,dtype = torch.float32)):
     '''
     Calcultae and return the data loss, pde loss and ic (Initial condition) loss
     Args:
@@ -661,11 +661,11 @@ def SPDC_loss(u,y,input,equation_dict, grad="autograd", crystal_z_weights = 1):
     ic_loss = mse_loss(u0-y0[...,-2:])
     pde_loss = mse_loss(pde_res)/1e5/0.7578/5  
 
-    data_loss = torch.sum(mse_loss(u_full-y_full[...,-2:],reduction='none'), dim=(0,1,2,4)) / (torch.sum(mse_loss(y_full[...,-2:],reduction='none'), dim = (0,1,2,4)) + epsilon)
+    data_loss = torch.sum(mse_loss(u_full-y_full[...,-2:],reduction='none'), dim=(1,2)) / (torch.sum(mse_loss(y_full[...,-2:],reduction='none'), dim = (1,2)) + epsilon)
+    data_loss = torch.mean(data_loss, dim = (0,2)) # avarge on the batchsize, signal and idler
     
-    crystal_z_weights = torch.tensor(crystal_z_weights,dtype = torch.float32,device = data_loss.device)
-    crystal_z_weights = crystal_z_weights / torch.sum(crystal_z_weights) # normalize to 1
-    data_loss = torch.mean(data_loss * crystal_z_weights)
+    crystal_z_weights = crystal_z_weights.to(data_loss.device)
+    data_loss = torch.sum(data_loss * crystal_z_weights)
 
     gc.collect()
     torch.cuda.empty_cache()
