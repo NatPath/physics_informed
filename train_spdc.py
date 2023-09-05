@@ -52,6 +52,8 @@ def train_SPDC(model,
                          settings=wandb.Settings(start_method="fork"),
                          resume=True)
         print(f"wandb is activated")
+    else:
+        id='no-wandb-no-id'
 
     data_weight = config['train']['xy_loss']
     f_weight = config['train']['f_loss']
@@ -360,11 +362,11 @@ def run(args, config):
                                      n_sample=data_config['total_num'] - data_config['n_sample'],
                                      batch_size=config['train']['batchsize'],
                                      start=data_config['n_sample'],train=False)
-        val_first_pump_dl=dataset.make_loader(
-                                        n_sample=data_config['spp'],
-                                        batch_size=config['train']['batchsize'],
-                                        start=data_config['n_sample'],
-                                        train=False)
+    val_first_pump_dl=dataset.make_loader(
+                                    n_sample=data_config['spp'],
+                                    batch_size=config['train']['batchsize'],
+                                    start=data_config['n_sample'],
+                                    train=False)
     del dataset
     gc.collect()
     torch.cuda.empty_cache()
