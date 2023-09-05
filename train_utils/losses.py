@@ -664,6 +664,7 @@ def SPDC_loss(u,y,input,equation_dict, grad="autograd", crystal_z_weights = 1):
     data_loss = torch.sum(mse_loss(u_full-y_full[...,-2:],reduction='none'), dim=(0,1,2,4)) / (torch.sum(mse_loss(y_full[...,-2:],reduction='none'), dim = (0,1,2,4)) + epsilon)
     
     crystal_z_weights = torch.tensor(crystal_z_weights,dtype = torch.float32,device = data_loss.device)
+    crystal_z_weights = crystal_z_weights / torch.sum(crystal_z_weights) # normalize to 1
     data_loss = torch.mean(data_loss * crystal_z_weights)
 
     gc.collect()
