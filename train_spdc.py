@@ -56,6 +56,11 @@ def train_SPDC(model,
     data_weight = config['train']['xy_loss']
     f_weight = config['train']['f_loss']
     ic_weight = config['train']['ic_loss']
+    if 'crystal_z_weights' in config ['train']:
+        crystal_z_weights = config['train']['crystal_z_weights']
+    else:
+        crystal_z_weights = 1
+
     #normalize weights to sum to 1
     sum_weights=data_weight+f_weight+ic_weight
     data_weight=data_weight/sum_weights
@@ -109,7 +114,7 @@ def train_SPDC(model,
             out = model(x_in).reshape(y.shape[0],y.shape[1],y.shape[2],y.shape[3] + padding, 2*nout)
             # out = out[...,:-padding,:, :] # if padding is not 0
 
-            data_loss,ic_loss,f_loss = SPDC_loss(u=out,y=y,input=x,equation_dict=equation_dict, grad=grad)
+            data_loss,ic_loss,f_loss = SPDC_loss(u=out,y=y,input=x,equation_dict=equation_dict, grad=grad, crystal_z_weights= crystal_z_weights)
             total_loss = ic_loss * ic_weight + f_loss * f_weight + data_loss * data_weight
 
             gc.collect()
