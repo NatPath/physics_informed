@@ -1,13 +1,14 @@
 data:
   name: spdc
-  datapath: '/home/dor-hay.sha/project/data/spdc/fixed_pump_100.bin'
+  datapath: '/home/dor-hay.sha/project/data/spdc/fixed_pump_N-100_seed-1701.bin'
   total_num: 100
   offset: 0
   n_sample: 80
   nx: 121
   ny: 121
   nz: 10
-  sub_xy: 4
+  sub_xy: 1
+  subsample_xy: 30
   sub_z: 1
   nin: 3
   nout: 2
