@@ -1,6 +1,7 @@
 import torch.nn as nn
 from .basics import SpectralConv3d
 from .utils import add_padding, remove_padding, _get_activation_func
+import torch.autograd.profiler as profiler
 
 
 class FNO3d(nn.Module):
@@ -71,18 +72,18 @@ class FNO3d(nn.Module):
             num_pad = [0., 0.]
         length = len(self.ws)
         batchsize = x.shape[0]
-        
-        x = self.fc0(x)
-        x = x.permute(0, 4, 1, 2, 3)
-        x = add_padding(x, num_pad=num_pad)
-        size_x, size_y, size_z = x.shape[-3], x.shape[-2], x.shape[-1]
-
-        for i, (speconv, w) in enumerate(zip(self.sp_convs, self.ws)):
-            x1 = speconv(x)
-            x2 = w(x.view(batchsize, self.layers[i], -1)).view(batchsize, self.layers[i+1], size_x, size_y, size_z)
-            x = x1 + x2
-            if i != length - 1:
-                x = self.act(x)
+        with profiler.record_function("LINEAR_PASS"):
+            x = self.fc0(x)
+            x = x.permute(0, 4, 1, 2, 3)
+            x = add_padding(x, num_pad=num_pad)
+            size_x, size_y, size_z = x.shape[-3], x.shape[-2], x.shape[-1]
+        with profiler.record_function("SPECTRAL CONVOLUTION"):
+            for i, (speconv, w) in enumerate(zip(self.sp_convs, self.ws)):
+                x1 = speconv(x)
+                x2 = w(x.view(batchsize, self.layers[i], -1)).view(batchsize, self.layers[i+1], size_x, size_y, size_z)
+                x = x1 + x2
+                if i != length - 1:
+                    x = self.act(x)
         x = remove_padding(x, num_pad=num_pad)
         x = x.permute(0, 2, 3, 4, 1)
         x = self.fc1(x)
