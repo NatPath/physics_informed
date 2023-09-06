@@ -59,6 +59,13 @@ def train_SPDC(model,
     data_weight = config['train']['xy_loss']
     f_weight = config['train']['f_loss']
     ic_weight = config['train']['ic_loss']
+    if 'crystal_z_weights' in config ['train']:
+        crystal_z_weights = config['train']['crystal_z_weights']
+        crystal_z_weights = torch.tensor(crystal_z_weights,dtype = torch.float32)
+        crystal_z_weights = crystal_z_weights / torch.sum(crystal_z_weights) # normalize to 1
+    else:
+        crystal_z_weights = torch.tensor(1,dtype = torch.float32)
+
     #normalize weights to sum to 1
     sum_weights=data_weight+f_weight+ic_weight
     data_weight=data_weight/sum_weights
@@ -112,7 +119,7 @@ def train_SPDC(model,
             out = model(x_in).reshape(y.shape[0],y.shape[1],y.shape[2],y.shape[3] + padding, 2*nout)
             # out = out[...,:-padding,:, :] # if padding is not 0
 
-            data_loss,ic_loss,f_loss = SPDC_loss(u=out,y=y,input=x,equation_dict=equation_dict, grad=grad)
+            data_loss,ic_loss,f_loss = SPDC_loss(u=out,y=y,input=x,equation_dict=equation_dict, grad=grad, crystal_z_weights= crystal_z_weights)
             total_loss = ic_loss * ic_weight + f_loss * f_weight + data_loss * data_weight
 
             gc.collect()
@@ -138,7 +145,8 @@ def train_SPDC(model,
                                         equation_dict=equation_dict,
                                         device=rank,
                                         use_tqdm=False,
-                                        validation=True)
+                                        validation=True,
+                                        crystal_z_weights=crystal_z_weights)
 
             if validation_loss<min_valid_loss:
                 min_valid_loss=validation_loss
@@ -221,10 +229,12 @@ def eval_SPDC(model,
                  device,
                  padding = 0,
                  use_tqdm=True,
-                 validation=False):
+                 validation=False,
+                 crystal_z_weights = torch.tensor(1,dtype = torch.float32)):
     model.eval()
     nout = config['data']['nout']
     grad = config['model']['grad']
+
     
     chi_orignial = equation_dict["chi"]
     subsample_nxy = None
@@ -255,7 +265,7 @@ def eval_SPDC(model,
         out = model(x_in).reshape(y.shape[0],y.shape[1],y.shape[2],y.shape[3] + padding, 2*nout)
             # out = out[...,:-padding,:, :] # if padding is not 0
 
-        data_loss,ic_loss,f_loss = SPDC_loss(u=out,y=y,input=x,equation_dict=equation_dict, grad=grad)
+        data_loss,ic_loss,f_loss = SPDC_loss(u=out,y=y,input=x,equation_dict=equation_dict, grad=grad, crystal_z_weights=crystal_z_weights)
         test_err.append(data_loss.item())
         f_err.append(f_loss.item())
         ic_err.append(ic_loss.item())
@@ -281,7 +291,8 @@ def eval_dummy_SPDC(dataloader,
                  equation_dict,
                  device,
                  padding = 0,
-                 use_tqdm=True):
+                 use_tqdm=True,
+                 crystal_z_weights = torch.tensor(1,dtype = torch.float32)):
     nout = config['data']['nout']
     grad = config['model']['grad']
 
@@ -300,7 +311,7 @@ def eval_dummy_SPDC(dataloader,
         torch.cuda.empty_cache()
         x, y = x.to(device), y.to(device)
         out = torch.zeros_like(y)[...,:2*nout]
-        data_loss,ic_loss,f_loss = SPDC_loss(u=out,y=y,input=x,equation_dict=equation_dict,grad=grad)
+        data_loss,ic_loss,f_loss = SPDC_loss(u=out,y=y,input=x,equation_dict=equation_dict,grad=grad, crystal_z_weights=crystal_z_weights)
         test_err.append(data_loss.item())
         f_err.append(f_loss.item())
         ic_err.append(ic_loss.item())
@@ -452,7 +463,15 @@ def test(config):
         ckpt = torch.load(ckpt_path)
         model.load_state_dict(ckpt['model'])
         print('Weights loaded from %s' % ckpt_path)
-    eval_SPDC(model=model,dataloader=dataloader, config=config, equation_dict=equation_dict, device=device)
+
+    if 'crystal_z_weights' in config ['train']:
+        crystal_z_weights = config['train']['crystal_z_weights']
+        crystal_z_weights = torch.tensor(crystal_z_weights,dtype = torch.float32)
+        crystal_z_weights = crystal_z_weights / torch.sum(crystal_z_weights) # normalize to 1
+    else:
+        crystal_z_weights = torch.tensor(1,dtype = torch.float3)
+
+    eval_SPDC(model=model,dataloader=dataloader, config=config, equation_dict=equation_dict, device=device, crystal_z_weights=crystal_z_weights)
 
 def dummy(config):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -476,7 +495,14 @@ def dummy(config):
     del dataset
     gc.collect()
     torch.cuda.empty_cache()
-    eval_dummy_SPDC(dataloader=dataloader, config=config, equation_dict=equation_dict, device=device)
+    
+    if 'crystal_z_weights' in config ['train']:
+        crystal_z_weights = config['train']['crystal_z_weights']
+        crystal_z_weights = torch.tensor(crystal_z_weights,dtype = torch.float32)
+        crystal_z_weights = crystal_z_weights / torch.sum(crystal_z_weights) # normalize to 1
+    else:
+        crystal_z_weights = torch.tensor(1,dtype = torch.float32)
+    eval_dummy_SPDC(dataloader=dataloader, config=config, equation_dict=equation_dict, device=device, crystal_z_weights=crystal_z_weights)
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='Basic paser')
