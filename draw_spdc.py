@@ -17,7 +17,7 @@ import wandb
 
 
 def draw_spdc_from_train(config,save_name,model,first_pump_dl,device,id,train_or_validate):
-    fake_config={'data':{'nout':config['data']['nout']},'test':{'ckpt':save_name}}
+    fake_config={'data':config['data'],'test':{'ckpt':save_name}}
     draw_SPDC(model,first_pump_dl,fake_config,{},device,test_name=f'{train_or_validate}_first_pump_id_{id}',emd=False)
     prefix=f'draw_spdc_results/{train_or_validate}_first_pump_id_{id}/{save_name[:-3]}'
     idler_pred_image_loc=prefix+'/idler out-prediction.jpg'
@@ -28,7 +28,7 @@ def draw_spdc_from_train(config,save_name,model,first_pump_dl,device,id,train_or
     wandb.log({f"signal_pred_{train_or_validate}ed_on":wandb.Image(signal_pred_image_loc)},commit=False)
     wandb.log({f"idler_grt_{train_or_validate}ed_on":wandb.Image(idler_grt_image_loc)},commit=False)
     wandb.log({f"signal_grt_{train_or_validate}ed_on":wandb.Image(signal_grt_image_loc)},commit=False)
-    for z in range(10):
+    for z in range(config['data']['nz']):
         results_together_i_loc=prefix+f'/all_results_together_z={z}.jpg'
         wandb.log({f"results_together z={z} {train_or_validate}ed on":wandb.Image(results_together_i_loc)},commit=False)
 
@@ -174,7 +174,7 @@ def draw_SPDC(model,
     results_dir=os.path.join(script_dir,results_dir_name)
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
-    for z in range(10):
+    for z in range(config['data']['nz']):
         plot_av_sol(total_out,total_y,z,ckpt_name,results_dir,emd)
     # plot_singel_sol(total_out,total_y,1,ckpt_name)
 
@@ -229,7 +229,7 @@ def run(args, config):
 if __name__ == '__main__':
     parser = ArgumentParser(description='Basic paser')
     parser.add_argument('--config_path', type=str, help='Path to the configuration file')
-    parser.add_argument('--emd_off', action='store_true', help='Turn on the EMD calculation')
+    parser.add_argument('--emd_off', action='store_true', help='Turn off the EMD calculation')
     args = parser.parse_args()
 
     config_file = args.config_path
