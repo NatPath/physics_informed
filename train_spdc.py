@@ -505,11 +505,11 @@ def dummy(config):
     torch.cuda.empty_cache()
     
     if 'crystal_z_weights' in config ['train']:
-        crystal_z_weights = config['train']['crystal_z_weights']
-        crystal_z_weights = torch.tensor(crystal_z_weights,dtype = torch.float32)
-        crystal_z_weights = crystal_z_weights / torch.sum(crystal_z_weights) # normalize to 1
+        crystal_z_weights = torch.tensor(config['train']['crystal_z_weights'],dtype=torch.float32)
     else:
-        crystal_z_weights = torch.tensor(1,dtype = torch.float32)
+        crystal_z_weights = torch.tensor([0]+[1]*(data_config['nz']-1),dtype = torch.float32)
+    crystal_z_weights = crystal_z_weights / torch.sum(crystal_z_weights) # normalize to 1
+
     eval_dummy_SPDC(dataloader=dataloader, config=config, equation_dict=equation_dict, device=device, crystal_z_weights=crystal_z_weights)
 
 if __name__ == '__main__':
