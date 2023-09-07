@@ -603,7 +603,7 @@ def coupled_wave_eq_PDE_Loss_fourier(u,input,k_arr, kappa_i, kappa_s):
 
     return torch.sum(abs(residual_1))+torch.sum(abs(residual_2))+torch.sum(abs(residual_3))+torch.sum(abs(residual_4))
 
-def SPDC_loss(u,y,input,equation_dict, grad="autograd"):
+def SPDC_loss(u,y,input,equation_dict, grad="autograd", crystal_z_weights = torch.tensor(1,dtype = torch.float32)):
     '''
     Calcultae and return the data loss, pde loss and ic (Initial condition) loss
     Args:
@@ -625,11 +625,13 @@ def SPDC_loss(u,y,input,equation_dict, grad="autograd"):
         "fourier_diff" - fourier diffrentiention
         "none" - does not calculate pde loss
 
+    crystal_z_weights: A scalar or a torch.tensor of shape [Nz], with the weight of each z on the crystal
     Return: (data_loss,ic_loss,pde_loss)
     '''
 
-    mse_loss = lambda x: F.mse_loss(torch.abs(x),torch.zeros(x.shape,device=x.device,dtype=input.dtype))
-    # mse_loss = lambda x: F.l1_loss(torch.abs(x),torch.zeros(x.shape,device=x.device,dtype=input.dtype)) # trying L1 loss
+    mse_loss = lambda x,reduction='mean': F.mse_loss(torch.abs(x),torch.zeros(x.shape,device=x.device,dtype=input.dtype),reduction=reduction)
+    epsilon = 1e-8
+
     batchsize = u.size(0)
     nx = u.size(1)
     ny = u.size(2)
@@ -657,9 +659,19 @@ def SPDC_loss(u,y,input,equation_dict, grad="autograd"):
     u0 = u_full[..., 0,:]
     y0 = y_full[..., 0,:]
     ic_loss = mse_loss(u0-y0[...,-2:])
-    data_loss = mse_loss(u_full-y_full[...,-2:])/mse_loss(y_full[...,-2:])
-    pde_loss = mse_loss(pde_res)/1e5/0.7578
+    pde_loss = mse_loss(pde_res)/1e5/0.7578/5  
+
+    y_norm = torch.sum(mse_loss(y_full[...,-2:],reduction='none'), dim = (1,2))
+    x_norm = torch.sum(mse_loss(u_full,reduction='none'), dim = (1,2))
+    data_loss = torch.sum(mse_loss(u_full-y_full[...,-2:],reduction='none'), dim=(1,2)) / ((y_norm + epsilon) * (x_norm + epsilon))
+    data_loss = torch.mean(data_loss, dim = (0,2)) # avarge on the batchsize, signal and idler
+
+
+    crystal_z_weights = crystal_z_weights.to(data_loss.device)
+    data_loss = torch.sum(data_loss * crystal_z_weights)
+
+    old_data_loss = mse_loss(u_full-y_full[...,-2:])/mse_loss(y_full[...,-2:])
     gc.collect()
     torch.cuda.empty_cache()
 
-    return data_loss,ic_loss,pde_loss
+    return data_loss,ic_loss,pde_loss, old_data_loss
