@@ -14,8 +14,9 @@ import gc
 import torch.nn as nn
 import wandb
 import draw_spdc
-import torch.autograd.profiler as profiler
-from torch.profiler import ProfilerActivity
+from torch.profiler import profile, record_function, ProfilerActivity
+import contextlib
+
 
 
 def train_SPDC(model,
@@ -36,7 +37,7 @@ def train_SPDC(model,
                     use_tqdm=True,
                     e_start=0,
                     best_val_yet=float('inf')):
-    with profiler.record_function("PRE TRAIN LOADING"):
+    with record_function("PRE TRAIN LOADING"):
         # e_start: epoch to start counting from, dictated by saved checkpoint loaded from
         # best_val_yet: dictated by ckptloaded from, if loaded from
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -88,7 +89,7 @@ def train_SPDC(model,
 
     min_train_loss=float('inf')
     min_valid_loss=min(float('inf'),best_val_yet)
-    with profiler.record_function("TRAINING LOOP"):
+    with record_function("TRAINING LOOP"):
         if 'epochs_delta' in config['train']:
             epochs_delta = config['train']['epochs_delta']
         else:
@@ -205,7 +206,7 @@ def train_SPDC(model,
                                 config['train']['save_name'].replace('.pt', f'_id-{id}_best_yet.pt'),
                                 model, optimizer,scheduler,
                                 epoch=e, best_val_yet=min_valid_loss)
-    with profiler.record_function("CHECKPOINT AND DRAW_SPDC"):
+    with record_function("CHECKPOINT AND DRAW_SPDC"):
         save_checkpoint(config['train']['save_dir'],
                         config['train']['save_name'].replace('.pt',f'_id-{id}.pt'),
                         model, optimizer,scheduler,
@@ -396,9 +397,9 @@ def run(args, config):
                                                      gamma=config['train']['scheduler_gamma'])
     if 'ckpt' in config['train']:
         scheduler.load_state_dict(ckpt['scheduler'])
-
-    with profiler.profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], profile_memory  = True, use_cuda = True) as prof:
-        with profiler.record_function("OVERALL TRAINING"):                                          
+    profiler_context = profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], profile_memory  = True, use_cuda = True) if args.profile else contextlib.nullcontext()
+    with profiler_context as prof:
+        with record_function("OVERALL TRAINING"):                                          
             train_SPDC(model,
                             train_loader, 
                             optimizer, 
@@ -416,8 +417,9 @@ def run(args, config):
                             val_first_pump_dl=val_first_pump_dl,
                             e_start=e_start,
                             best_val_yet=best_val_yet)
-    with open("Profile_Output.txt", 'w') as profiler_output_file:
-        profiler_output_file.write(prof.key_averages().table())
+    if args.profile:
+        with open("Profile_Output.txt", 'w') as profiler_output_file:
+            profiler_output_file.write(prof.key_averages().table())
 
 
 def test(config):

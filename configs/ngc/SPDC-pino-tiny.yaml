@@ -10,7 +10,7 @@ data:
   nz: 10
   sub_xy: 4
   sub_z: 1
-  subsample_xy: 3
+  subsample_xy: 30
   nin: 3
   nout: 2
 
@@ -27,9 +27,9 @@ model:
   grad: 'none'
 
 train:
-  batchsize: 1
+  batchsize: 4
   epochs: 1
-  milestones: [1]
+  milestones: [150, 300, 450]
   base_lr: 0.001
   scheduler_gamma: 0.5
   ic_loss: 0.0
