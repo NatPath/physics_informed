@@ -1,6 +1,5 @@
 from argparse import ArgumentParser
 import yaml
-
 import torch
 import numpy as np
 from models import FNO3d
@@ -16,8 +15,6 @@ import wandb
 import draw_spdc
 from torch.profiler import profile, record_function, ProfilerActivity
 import contextlib
-
-
 
 def train_SPDC(model,
                     train_loader, 
@@ -37,9 +34,9 @@ def train_SPDC(model,
                     use_tqdm=True,
                     e_start=0,
                     best_val_yet=float('inf')):
+    # e_start: epoch to start counting from, dictated by saved checkpoint loaded from
+    # best_val_yet: dictated by ckptloaded from, if loaded from
     with record_function("PRE TRAIN LOADING"):
-        # e_start: epoch to start counting from, dictated by saved checkpoint loaded from
-        # best_val_yet: dictated by ckptloaded from, if loaded from
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         if wandb and log:
             if 'id' in config['train']:
@@ -81,19 +78,20 @@ def train_SPDC(model,
         if config["data"].get("subsample_xy") is not None:
             subsample_nxy = config["data"]["subsample_xy"]
 
-    
-    model.train()
-    pbar = range(e_start,config['train']['epochs'])
-    if use_tqdm:
-        pbar = tqdm(pbar, dynamic_ncols=True, smoothing=0.1)
 
-    min_train_loss=float('inf')
-    min_valid_loss=min(float('inf'),best_val_yet)
-    with record_function("TRAINING LOOP"):
+        model.train()
+        pbar = range(e_start,config['train']['epochs'])
+        if use_tqdm:
+            pbar = tqdm(pbar, dynamic_ncols=True, smoothing=0.1)
+
+        min_train_loss=float('inf')
+        min_valid_loss=min(float('inf'),best_val_yet)
+
         if 'epochs_delta' in config['train']:
             epochs_delta = config['train']['epochs_delta']
         else:
             epochs_delta=100
+    with record_function("TRAINING LOOP"):
         for e in pbar:
             model.train()
             train_pino = 0.0
@@ -397,9 +395,10 @@ def run(args, config):
                                                      gamma=config['train']['scheduler_gamma'])
     if 'ckpt' in config['train']:
         scheduler.load_state_dict(ckpt['scheduler'])
+
     profiler_context = profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], profile_memory  = True, use_cuda = True) if args.profile else contextlib.nullcontext()
     with profiler_context as prof:
-        with record_function("OVERALL TRAINING"):                                          
+        with record_function("OVERALL TRAINING"):                                            
             train_SPDC(model,
                             train_loader, 
                             optimizer, 
@@ -492,6 +491,7 @@ if __name__ == '__main__':
     parser.add_argument('--validate', action='store_true', help='Calculate validation error')
     parser.add_argument('--mode', type=str, help='train, test or dummy')
     parser.add_argument('--profile',action='store_true', help = 'Use the pytorch profiler to get runtime and memory information' )
+
     args = parser.parse_args()
 
     config_file = args.config_path
