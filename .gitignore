@@ -30,3 +30,4 @@ configs/test/SPDC-test-tmp_random.yaml
 configs/ngc/SPDC-pino-tmp_sub.yaml
 slurm_script/pino-tmp_quick.sh
 configs/test/SPDC-test-tmp_pure.yaml
+Profile_Output.txt
