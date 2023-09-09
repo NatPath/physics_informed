@@ -17,7 +17,7 @@ import wandb
 
 
 def draw_spdc_from_train(config,save_name,model,first_pump_dl,device,id,train_or_validate):
-    fake_config={'data':{'nout':config['data']['nout']},'test':{'ckpt':save_name}}
+    fake_config={'data':config['data'],'test':{'ckpt':save_name}}
     draw_SPDC(model,first_pump_dl,fake_config,{},device,test_name=f'{train_or_validate}_first_pump_id_{id}',emd=False)
     prefix=f'draw_spdc_results/{train_or_validate}_first_pump_id_{id}/{save_name[:-3]}'
     idler_pred_image_loc=prefix+'/idler out-prediction.jpg'
@@ -28,7 +28,7 @@ def draw_spdc_from_train(config,save_name,model,first_pump_dl,device,id,train_or
     wandb.log({f"signal_pred_{train_or_validate}ed_on":wandb.Image(signal_pred_image_loc)},commit=False)
     wandb.log({f"idler_grt_{train_or_validate}ed_on":wandb.Image(idler_grt_image_loc)},commit=False)
     wandb.log({f"signal_grt_{train_or_validate}ed_on":wandb.Image(signal_grt_image_loc)},commit=False)
-    for z in range(10):
+    for z in range(config['data']['nz']):
         results_together_i_loc=prefix+f'/all_results_together_z={z}.jpg'
         wandb.log({f"results_together z={z} {train_or_validate}ed on":wandb.Image(results_together_i_loc)},commit=False)
 
@@ -81,6 +81,60 @@ def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt.pt',results_dir='default_dir_nam
     save_name=f'all_results_together_z={z}'
     
     draw_utils.plot_3d_grid(title,plots, row_names, col_names, numbers,results_dir,save_name)
+
+def plot_sol_with_phase(u,y,z=9,ckpt_name='default_ckpt.pt',results_dir='default_dir_name'):
+    # y = torch.ones_like(y)
+    results_dir=results_dir+f'/{ckpt_name[:-3]}'
+    if not os.path.isdir(results_dir):
+        os.makedirs(results_dir)
+
+    N,nx,ny,nz,u_nfields = u.shape
+    y_nfields = y.shape[4]
+    u = u.reshape(N,nx, ny, nz,2,u_nfields//2)
+    y = y.reshape(N,nx, ny, nz,2,y_nfields//2)[...,-2:]
+    u = (u[...,0,:] + 1j*u[...,1,:]).detach().numpy()
+    y = (y[...,0,:] + 1j*y[...,1,:]).detach().numpy()
+
+
+    
+    fig, ax = plt.subplots(2,4,dpi=200)
+
+    dict = {0:"signal out", 1:"idler out"}
+    for i in [0,1]:
+        for sol,src,j in zip([u,y],["pred", "grt"],[0,1]):
+            plt.suptitle(f"z={z}")
+            if N==1:
+                    I = np.abs(sol[0,:,:,z,i])**2
+                    phase = np.angle(sol[0,:,:,:,i]) 
+            else:
+                    I = np.mean(np.abs(sol[...,z,i])**2,axis=0)
+                    phase = np.mean(np.angle(sol[...,z,i]),axis=0)
+            Imin = np.min(I)
+            Imax = np.max(I)
+
+            im1 = ax[0][2*i+j].matshow(I,cmap='coolwarm',vmin=Imin,vmax=Imax)
+            ax[0][2*i+j].set_title(f"{dict[i]}-{src}",fontdict={'fontsize':7})
+            ax[0][2*i+j].set_xticks([])
+            ax[0][2*i+j].set_yticks([])
+
+            Pmin = np.min(phase)
+            Pmax = np.max(phase)
+            im2 = ax[1][2*i+j].imshow(phase,cmap='coolwarm',vmin=Pmin,vmax=Pmax)
+            # ax[1][2*i+j].set_title("phase [rad]")
+            ax[1][2*i+j].set_xticks([])
+            ax[1][2*i+j].set_yticks([])
+
+    # Create the first colorbar for the upper subplots
+    fig.subplots_adjust(right=0.8)
+    cbar_ax1 = fig.add_axes([0.85, 0.55, 0.05, 0.35])
+    fig.colorbar(im1, cax=cbar_ax1)
+
+    # Create the second colorbar for the lower subplots
+    cbar_ax2 = fig.add_axes([0.85, 0.15, 0.05, 0.35])
+    fig.colorbar(im2, cax=cbar_ax2)
+
+    plt.savefig(f"{results_dir}/new_z={z}.jpg")
+    plt.close('all')
 
 def plot_av_sol_old(u,y,ckpt_name):
     # y = torch.ones_like(y)
@@ -174,9 +228,9 @@ def draw_SPDC(model,
     results_dir=os.path.join(script_dir,results_dir_name)
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
-    for z in range(10):
+    for z in range(config['data']['nz']):
+        plot_sol_with_phase(total_out,total_y,z,ckpt_name,results_dir)
         plot_av_sol(total_out,total_y,z,ckpt_name,results_dir,emd)
-    # plot_singel_sol(total_out,total_y,1,ckpt_name)
 
 
 
@@ -229,7 +283,7 @@ def run(args, config):
 if __name__ == '__main__':
     parser = ArgumentParser(description='Basic paser')
     parser.add_argument('--config_path', type=str, help='Path to the configuration file')
-    parser.add_argument('--emd_off', action='store_true', help='Turn on the EMD calculation')
+    parser.add_argument('--emd_off', action='store_true', help='Turn off the EMD calculation')
     args = parser.parse_args()
 
     config_file = args.config_path
