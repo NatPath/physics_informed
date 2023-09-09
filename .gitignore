@@ -35,3 +35,6 @@ slurm_script/pino-tmp_quick.sh
 configs/test/SPDC-test-tmp_pure.yaml
 Profile_Output.txt
 configs/ngc/SPDC-pino-tiny.yaml
+slurm_script/pino-tmp_quick.sh
+configs/test/SPDC-test-tmp_pure.yaml
+Profile_Output.txt
