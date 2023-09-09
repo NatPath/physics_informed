@@ -24,6 +24,7 @@ def train_SPDC(model,
                     rank=0, 
                     log=False,
                     validate=False,
+                    draw = True,
                     val_dataloader = None,
                     train_first_pump_dl = None,
                     val_first_pump_dl = None,
@@ -60,6 +61,13 @@ def train_SPDC(model,
         data_weight = config['train']['xy_loss']
         f_weight = config['train']['f_loss']
         ic_weight = config['train']['ic_loss']
+        if 'crystal_z_weights' in config ['train']:
+            crystal_z_weights = config['train']['crystal_z_weights']
+            crystal_z_weights = torch.tensor(crystal_z_weights,dtype = torch.float32)
+            crystal_z_weights = crystal_z_weights / torch.sum(crystal_z_weights) # normalize to 1
+        else:
+            crystal_z_weights = torch.tensor(1,dtype = torch.float32)
+
         #normalize weights to sum to 1
         sum_weights=data_weight+f_weight+ic_weight
         data_weight=data_weight/sum_weights
@@ -114,7 +122,7 @@ def train_SPDC(model,
                 out = model(x_in).reshape(y.shape[0],y.shape[1],y.shape[2],y.shape[3] + padding, 2*nout)
                 # out = out[...,:-padding,:, :] # if padding is not 0
 
-                data_loss,ic_loss,f_loss = SPDC_loss(u=out,y=y,input=x,equation_dict=equation_dict, grad=grad)
+                data_loss,ic_loss,f_loss = SPDC_loss(u=out,y=y,input=x,equation_dict=equation_dict, grad=grad, crystal_z_weights= crystal_z_weights)
                 total_loss = ic_loss * ic_weight + f_loss * f_weight + data_loss * data_weight
 
                 gc.collect()
@@ -140,7 +148,8 @@ def train_SPDC(model,
                                             equation_dict=equation_dict,
                                             device=rank,
                                             use_tqdm=False,
-                                            validation=True)
+                                            validation=True,
+                                            crystal_z_weights=crystal_z_weights)
 
                 if validation_loss<min_valid_loss:
                     min_valid_loss=validation_loss
@@ -195,7 +204,7 @@ def train_SPDC(model,
                                 epoch=e, best_val_yet=min_valid_loss)
                 #small spagheti, excuse me..
                 #overall it draws the images and sends them to wandb (only in some epochs)
-                if wandb and log:
+                if (wandb and log) and draw:
                     draw_spdc.draw_spdc_from_train(config,tmp_save_name,model,train_first_pump_dl,device,id,train_or_validate='train')
                     draw_spdc.draw_spdc_from_train(config,tmp_save_name,model, val_first_pump_dl,device,id,train_or_validate='val')
             if train_loss < min_train_loss:
@@ -209,7 +218,7 @@ def train_SPDC(model,
                         config['train']['save_name'].replace('.pt',f'_id-{id}.pt'),
                         model, optimizer,scheduler,
                         epoch=e, best_val_yet=min_valid_loss)
-        if wandb and log: 
+        if (wandb and log) and draw: 
             draw_spdc.draw_spdc_from_train(config,tmp_save_name,model,train_first_pump_dl,device,id,dl_train_or_validate='val')
             draw_spdc.draw_spdc_from_train(config,tmp_save_name,model, val_first_pump_dl,device,id,dl_train_or_validate='train')
 
@@ -223,10 +232,12 @@ def eval_SPDC(model,
                  device,
                  padding = 0,
                  use_tqdm=True,
-                 validation=False):
+                 validation=False,
+                 crystal_z_weights = torch.tensor(1,dtype = torch.float32)):
     model.eval()
     nout = config['data']['nout']
     grad = config['model']['grad']
+
     
     chi_orignial = equation_dict["chi"]
     subsample_nxy = None
@@ -257,7 +268,7 @@ def eval_SPDC(model,
         out = model(x_in).reshape(y.shape[0],y.shape[1],y.shape[2],y.shape[3] + padding, 2*nout)
             # out = out[...,:-padding,:, :] # if padding is not 0
 
-        data_loss,ic_loss,f_loss = SPDC_loss(u=out,y=y,input=x,equation_dict=equation_dict, grad=grad)
+        data_loss,ic_loss,f_loss = SPDC_loss(u=out,y=y,input=x,equation_dict=equation_dict, grad=grad, crystal_z_weights=crystal_z_weights)
         test_err.append(data_loss.item())
         f_err.append(f_loss.item())
         ic_err.append(ic_loss.item())
@@ -283,7 +294,8 @@ def eval_dummy_SPDC(dataloader,
                  equation_dict,
                  device,
                  padding = 0,
-                 use_tqdm=True):
+                 use_tqdm=True,
+                 crystal_z_weights = torch.tensor(1,dtype = torch.float32)):
     nout = config['data']['nout']
     grad = config['model']['grad']
 
@@ -302,7 +314,7 @@ def eval_dummy_SPDC(dataloader,
         torch.cuda.empty_cache()
         x, y = x.to(device), y.to(device)
         out = torch.zeros_like(y)[...,:2*nout]
-        data_loss,ic_loss,f_loss = SPDC_loss(u=out,y=y,input=x,equation_dict=equation_dict,grad=grad)
+        data_loss,ic_loss,f_loss = SPDC_loss(u=out,y=y,input=x,equation_dict=equation_dict,grad=grad, crystal_z_weights=crystal_z_weights)
         test_err.append(data_loss.item())
         f_err.append(f_loss.item())
         ic_err.append(ic_loss.item())
@@ -360,6 +372,7 @@ def run(args, config):
                                           start=0,
                                           train=False)
     val_dataloader = None
+    val_first_pump_dl = None
     if args.validate:
         val_dataloader = dataset.make_loader(
                                      n_sample=data_config['total_num'] - data_config['n_sample'],
@@ -411,6 +424,7 @@ def run(args, config):
                             group=config['log']['group'],
                             tags=config['log']['tags'],
                             validate=args.validate,
+                            draw=not args.no_draw,
                             val_dataloader=val_dataloader,
                             train_first_pump_dl=train_first_pump_dl,
                             val_first_pump_dl=val_first_pump_dl,
@@ -458,7 +472,15 @@ def test(config):
         ckpt = torch.load(ckpt_path)
         model.load_state_dict(ckpt['model'])
         print('Weights loaded from %s' % ckpt_path)
-    eval_SPDC(model=model,dataloader=dataloader, config=config, equation_dict=equation_dict, device=device)
+
+    if 'crystal_z_weights' in config ['train']:
+        crystal_z_weights = config['train']['crystal_z_weights']
+        crystal_z_weights = torch.tensor(crystal_z_weights,dtype = torch.float32)
+        crystal_z_weights = crystal_z_weights / torch.sum(crystal_z_weights) # normalize to 1
+    else:
+        crystal_z_weights = torch.tensor(1,dtype = torch.float3)
+
+    eval_SPDC(model=model,dataloader=dataloader, config=config, equation_dict=equation_dict, device=device, crystal_z_weights=crystal_z_weights)
 
 def dummy(config):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -482,13 +504,21 @@ def dummy(config):
     del dataset
     gc.collect()
     torch.cuda.empty_cache()
-    eval_dummy_SPDC(dataloader=dataloader, config=config, equation_dict=equation_dict, device=device)
+    
+    if 'crystal_z_weights' in config ['train']:
+        crystal_z_weights = config['train']['crystal_z_weights']
+        crystal_z_weights = torch.tensor(crystal_z_weights,dtype = torch.float32)
+        crystal_z_weights = crystal_z_weights / torch.sum(crystal_z_weights) # normalize to 1
+    else:
+        crystal_z_weights = torch.tensor(1,dtype = torch.float32)
+    eval_dummy_SPDC(dataloader=dataloader, config=config, equation_dict=equation_dict, device=device, crystal_z_weights=crystal_z_weights)
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='Basic paser')
     parser.add_argument('--config_path', type=str, help='Path to the configuration file')
     parser.add_argument('--log', action='store_true', help='Turn on the wandb')
     parser.add_argument('--validate', action='store_true', help='Calculate validation error')
+    parser.add_argument('--no_draw',default=False, action='store_true', help='Cancel drawing')
     parser.add_argument('--mode', type=str, help='train, test or dummy')
     parser.add_argument('--profile',action='store_true', help = 'Use the pytorch profiler to get runtime and memory information' )
 
