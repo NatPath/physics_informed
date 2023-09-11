@@ -15,6 +15,7 @@ import wandb
 import draw_spdc
 from torch.profiler import profile, record_function, ProfilerActivity
 import contextlib
+import os
 
 def train_SPDC(model,
                     train_loader, 
@@ -34,7 +35,9 @@ def train_SPDC(model,
                     tags=['default'],
                     use_tqdm=True,
                     e_start=0,
-                    best_val_yet=float('inf')):
+                    best_val_yet=float('inf'),
+                    toProfile = False,
+                    prof = contextlib.nullcontext()):
     # e_start: epoch to start counting from, dictated by saved checkpoint loaded from
     # best_val_yet: dictated by ckptloaded from, if loaded from
     with record_function("PRE TRAIN LOADING"):
@@ -121,15 +124,16 @@ def train_SPDC(model,
                 x_in = F.pad(x,(0,0,0,padding),"constant",0).type(torch.float32)
                 out = model(x_in).reshape(y.shape[0],y.shape[1],y.shape[2],y.shape[3] + padding, 2*nout)
                 # out = out[...,:-padding,:, :] # if padding is not 0
-
-                data_loss,ic_loss,f_loss = SPDC_loss(u=out,y=y,input=x,equation_dict=equation_dict, grad=grad, crystal_z_weights= crystal_z_weights)
-                total_loss = ic_loss * ic_weight + f_loss * f_weight + data_loss * data_weight
+                with record_function("LOSS CALCULATION"):
+                    data_loss,ic_loss,f_loss = SPDC_loss(u=out,y=y,input=x,equation_dict=equation_dict, grad=grad, crystal_z_weights= crystal_z_weights)
+                    total_loss = ic_loss * ic_weight + f_loss * f_weight + data_loss * data_weight
 
                 gc.collect()
                 torch.cuda.empty_cache()
-                optimizer.zero_grad()
-                total_loss.backward()
-                optimizer.step()
+                with record_function("OPTIMIZER STEP"):
+                    optimizer.zero_grad()
+                    total_loss.backward()
+                    optimizer.step()
 
                 data_l2 += data_loss.item()
                 train_pino += f_loss.item() 
@@ -141,15 +145,16 @@ def train_SPDC(model,
 
             if validate:
                 equation_dict["chi"] = chi_orignial 
-                validation_loss = eval_SPDC(
-                                            model=model,
-                                            dataloader=val_dataloader,
-                                            config=config,
-                                            equation_dict=equation_dict,
-                                            device=rank,
-                                            use_tqdm=False,
-                                            validation=True,
-                                            crystal_z_weights=crystal_z_weights)
+                with record_function("VALIDATION LOSS"):
+                    validation_loss = eval_SPDC(
+                                                model=model,
+                                                dataloader=val_dataloader,
+                                                config=config,
+                                                equation_dict=equation_dict,
+                                                device=rank,
+                                                use_tqdm=False,
+                                                validation=True,
+                                                crystal_z_weights=crystal_z_weights)
 
                 if validation_loss<min_valid_loss:
                     min_valid_loss=validation_loss
@@ -429,10 +434,15 @@ def run(args, config):
                             train_first_pump_dl=train_first_pump_dl,
                             val_first_pump_dl=val_first_pump_dl,
                             e_start=e_start,
-                            best_val_yet=best_val_yet)
+                            best_val_yet=best_val_yet,
+                            toProfile = args.profile,
+                            prof = prof)
     if args.profile:
-        with open("Profile_Output.txt", 'w') as profiler_output_file:
+        with open("profiler_output/Overall_Profile_Output.txt", 'w') as profiler_output_file:
             profiler_output_file.write(prof.key_averages().table())
+        if wandb and args.log:
+                os.makedirs(os.path.dirname("profiler_output/Overall_Profile_Output.txt"), exist_ok=True)
+                wandb.log({"Profiler output":prof.key_averages().table()},commit=False)
 
 
 def test(config):
