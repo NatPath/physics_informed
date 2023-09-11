@@ -105,7 +105,7 @@ def plot_sol_with_phase(u,y,z=9,ckpt_name='default_ckpt.pt',results_dir='default
             plt.suptitle(f"z={z}")
             if N==1:
                     I = np.abs(sol[0,:,:,z,i])**2
-                    phase = np.angle(sol[0,:,:,:,i]) 
+                    phase = np.angle(sol[0,:,:,z,i]) 
             else:
                     I = np.mean(np.abs(sol[...,z,i])**2,axis=0)
                     phase = np.mean(np.angle(sol[...,z,i]),axis=0)
@@ -121,6 +121,60 @@ def plot_sol_with_phase(u,y,z=9,ckpt_name='default_ckpt.pt',results_dir='default
             Pmax = np.max(phase)
             im2 = ax[1][2*i+j].imshow(phase,cmap='coolwarm',vmin=Pmin,vmax=Pmax)
             # ax[1][2*i+j].set_title("phase [rad]")
+            ax[1][2*i+j].set_xticks([])
+            ax[1][2*i+j].set_yticks([])
+
+    # Create the first colorbar for the upper subplots
+    fig.subplots_adjust(right=0.8)
+    cbar_ax1 = fig.add_axes([0.85, 0.55, 0.05, 0.35])
+    fig.colorbar(im1, cax=cbar_ax1)
+
+    # Create the second colorbar for the lower subplots
+    cbar_ax2 = fig.add_axes([0.85, 0.15, 0.05, 0.35])
+    fig.colorbar(im2, cax=cbar_ax2)
+
+    plt.savefig(f"{results_dir}/new_z={z}.jpg")
+    plt.close('all')
+
+def plot_sol_with_real_img(u,y,z=9,ckpt_name='default_ckpt.pt',results_dir='default_dir_name'):
+    # y = torch.ones_like(y)
+    results_dir=results_dir+f'/{ckpt_name[:-3]}'
+    if not os.path.isdir(results_dir):
+        os.makedirs(results_dir)
+
+    N,nx,ny,nz,u_nfields = u.shape
+    y_nfields = y.shape[4]
+    u = u.reshape(N,nx, ny, nz,2,u_nfields//2)
+    y = y.reshape(N,nx, ny, nz,2,y_nfields//2)[...,-2:]
+    u = (u[...,0,:] + 1j*u[...,1,:]).detach().numpy()
+    y = (y[...,0,:] + 1j*y[...,1,:]).detach().numpy()
+
+
+    
+    fig, ax = plt.subplots(2,4,dpi=200)
+
+    dict = {0:"signal out", 1:"idler out"}
+    for i in [0,1]:
+        for sol,src,j in zip([u,y],["pred", "grt"],[0,1]):
+            plt.suptitle(f"z={z}")
+            if N==1:
+                    real = np.real(sol[0,:,:,z,i]) 
+                    img = np.imag(sol[0,:,:,z,i]) 
+            else:
+                    real = np.mean(np.real(sol[...,z,i]),axis=0)
+                    img = np.mean(np.imag(sol[...,z,i]),axis=0)
+            Rmin = np.min(real)
+            Rmax = np.max(real)
+
+            im1 = ax[0][2*i+j].matshow(real,cmap='coolwarm')
+            ax[0][2*i+j].set_title(f"{dict[i]}-{src}",fontdict={'fontsize':7})
+            ax[0][2*i+j].set_xticks([])
+            ax[0][2*i+j].set_yticks([])
+
+            Imin = np.min(img)
+            Imax = np.max(img)
+            im2 = ax[1][2*i+j].imshow(img,cmap='coolwarm')
+            # ax[1][2*i+j].set_title("img [rad]")
             ax[1][2*i+j].set_xticks([])
             ax[1][2*i+j].set_yticks([])
 
@@ -229,7 +283,7 @@ def draw_SPDC(model,
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
     for z in range(config['data']['nz']):
-        plot_sol_with_phase(total_out,total_y,z,ckpt_name,results_dir)
+        plot_sol_with_real_img(total_out,total_y,z,ckpt_name,results_dir)
         plot_av_sol(total_out,total_y,z,ckpt_name,results_dir,emd)
 
 
