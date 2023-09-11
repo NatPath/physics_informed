@@ -283,7 +283,7 @@ def draw_SPDC(model,
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
     for z in range(config['data']['nz']):
-        plot_sol_with_real_img(total_out,total_y,z,ckpt_name,results_dir)
+        plot_sol_with_phase(total_out,total_y,z,ckpt_name,results_dir)
         plot_av_sol(total_out,total_y,z,ckpt_name,results_dir,emd)
 
 
