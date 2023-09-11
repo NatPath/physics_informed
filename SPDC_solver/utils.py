@@ -329,10 +329,11 @@ def profile_laguerre_gauss(
         if mode == "pump":
             [X, Y] = np.meshgrid(shape.x, shape.y, indexing='ij')
             Z = shape.z[0]
+            pump_profile = np.zeros((shape.Nx, shape.Ny))
         elif mode == "crystal":
             [X, Y, Z] = np.meshgrid(shape.x, shape.y, shape.z, indexing='ij')
+            pump_profile = np.zeros((shape.Nx, shape.Ny, shape.Nz))
         
-        pump_profile = np.zeros((shape.Nx, shape.Ny))
         idx = 0
         for p in range(max_mode1):
             for l in range(-max_mode2, max_mode2 + 1):
