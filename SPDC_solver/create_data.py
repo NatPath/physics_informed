@@ -23,7 +23,7 @@ def single_mode(p,l,config,N_samples,seed):
     coeffs_arr[idx] = 1
 
     pump_coef = {"max_mode1": max_mode1, "max_mode2":max_mode2, "real_coef":coeffs_arr.real,"img_coef":coeffs_arr.imag}
-    A = SPDC_solver(N=N_samples,config=config,pump_coef=pump_coef,data_creation=True, seed=seed)
+    A = SPDC_solver(N=N_samples,crystal_coef=crystal_coef,is_crystal=is_crystal,config=config,pump_coef=pump_coef,data_creation=True, seed=seed)
     A.solve()
     return A.data
 
@@ -67,7 +67,7 @@ def save_data(data,file_name):
     print("Done!")
 
     
-def fixed_pump(N_samples, config ,spp = None, loc = None, seed = 1701):
+def fixed_pump(N_samples, config ,spp = None, loc = None, seed = 1701,crystal_coef={"max_mode1": 1, "max_mode2":0, "real_coef":np.array([1]),"img_coef":np.array([0])},is_crystal=False):
 
     default_loc = "/home/dor-hay.sha/project/data/spdc"
     file_name = str(f"fixed_pump_N-{N_samples}_seed-{seed}")
@@ -79,7 +79,7 @@ def fixed_pump(N_samples, config ,spp = None, loc = None, seed = 1701):
     if spp is None:
         print("Creating data: only one mode, p=0, l=0")
         file_name = file_name + ".bin"
-        A = SPDC_solver(N=N_samples,config=config,data_creation=True,seed=seed)
+        A = SPDC_solver(N=N_samples,crystal_coef=crystal_coef,is_crystal=is_crystal,config=config,data_creation=True,seed=seed)
         A.solve()
         data = A.data
 
@@ -94,7 +94,7 @@ def fixed_pump(N_samples, config ,spp = None, loc = None, seed = 1701):
 
     save_data(data,file_name)
 
-def fixed_pump_single_mode(N_samples, config ,p,l, loc = None, seed = 1701):
+def fixed_pump_single_mode(N_samples, config ,p,l, loc = None, seed = 1701,crystal_coef={"max_mode1": 1, "max_mode2":0, "real_coef":np.array([1]),"img_coef":np.array([0])},is_crystal=False):
     default_loc = "/home/dor-hay.sha/project/data/spdc"
     file_name = str(f"single_mode-({p},{l})_N-{N_samples}_seed-{seed}.bin")
     if loc is not None:
@@ -108,7 +108,7 @@ def fixed_pump_single_mode(N_samples, config ,p,l, loc = None, seed = 1701):
     save_data(data,file_name)
 
 
-def random_pump(N_samples, config ,spp = 1, max_mode = 5, seed = 1701, loc = None):
+def random_pump(N_samples, config ,spp = 1, max_mode = 5, seed = 1701, loc = None,crystal_coef={"max_mode1": 1, "max_mode2":0, "real_coef":np.array([1]),"img_coef":np.array([0])},is_crystal=False):
 
     if not (N_samples == (N_samples // spp) * spp):
         raise Exception("Error! (N /spp) is not a round number")
@@ -140,7 +140,7 @@ def random_pump(N_samples, config ,spp = 1, max_mode = 5, seed = 1701, loc = Non
 
         pump_coef = {"max_mode1": max_mode, "max_mode2":max_mode, "real_coef":coeffs_arr.real,"img_coef":coeffs_arr.imag}
 
-        A = SPDC_solver(N=spp,config=config,pump_coef=pump_coef,data_creation=True, seed = (seed + n))
+        A = SPDC_solver(N=spp,config=config,crystal_coef=crystal_coef,is_crystal=is_crystal,pump_coef=pump_coef,data_creation=True, seed = (seed + n))
         A.solve()
         if n==0:
             fields = A.data["fields"]
@@ -164,18 +164,36 @@ if __name__ == '__main__':
     parser.add_argument('--spp', type=int,help='Number of samples that will be created for each pump')
     parser.add_argument('-p', type=int, default=0, help = 'p number if creation mode is \'single\' (default p = 0)')
     parser.add_argument('-l', type=int, default=0, help = 'l number if creation mode is \'single\' (default l = 0)')
+    parser.add_argument('--crystal', action='store_true',default=False, help = 'Specify to create a custome crystal')
 
     args = parser.parse_args()
     config = Config(pump_waist=80e-6)
 
+    if args.crystal==True:
+        
+        p = 0
+        l = 3
+        max_mode1 = p + 1
+        max_mode2 = abs(l)
+        coeffs_arr = np.zeros(max_mode1*(2*max_mode2 + 1))
+        idx = p * (2*max_mode2 + 1) + l + max_mode2
+        coeffs_arr[idx] = 1
+
+        crystal_coef = {"max_mode1": max_mode1, "max_mode2":max_mode2, "real_coef":coeffs_arr.real,"img_coef":coeffs_arr.imag}
+        is_crystal=True
+    else:
+        crystal_coef = {"max_mode1": 1, "max_mode2":0, "real_coef":np.array([1]),"img_coef":np.array([0])}
+        is_crystal=False
+
+
     if args.mode == 'fixed':
-        fixed_pump(N_samples=args.N, config=config, spp=args.spp, loc=args.loc, seed=args.seed)
+        fixed_pump(N_samples=args.N,crystal_coef=crystal_coef,is_crystal=is_crystal, config=config, spp=args.spp, loc=args.loc, seed=args.seed)
     
     elif args.mode == 'single':
-        fixed_pump_single_mode(N_samples=args.N, config=config, p=args.p, l=args.l, loc=args.loc, seed=args.seed)
+        fixed_pump_single_mode(N_samples=args.N,crystal_coef=crystal_coef,is_crystal=is_crystal, config=config, p=args.p, l=args.l, loc=args.loc, seed=args.seed)
 
     elif args.mode == 'random':
-        random_pump(N_samples=args.N, config=config, spp=args.spp, seed=args.seed, loc=args.loc)
+        random_pump(N_samples=args.N ,crystal_coef=crystal_coef,is_crystal=is_crystal, config=config, spp=args.spp, seed=args.seed, loc=args.loc)
     
     else:
         raise Exception(f"Error! \'{args.mode}\' is not a valid creation mode'")
