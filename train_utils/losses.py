@@ -661,17 +661,19 @@ def SPDC_loss(u,y,input,equation_dict, grad="autograd", crystal_z_weights = torc
     ic_loss = mse_loss(u0-y0[...,-2:])
     pde_loss = mse_loss(pde_res)/1e5/0.7578/5  
 
-    y_norm = torch.sum(mse_loss(y_full[...,-2:],reduction='none'), dim = (1,2))
+    # y_norm = torch.sum(mse_loss(y_full[...,-2:],reduction='none'), dim = (1,2))
     x_norm = torch.sum(mse_loss(u_full,reduction='none'), dim = (1,2))
-    data_loss = torch.sum(mse_loss(u_full-y_full[...,-2:],reduction='none'), dim=(1,2)) / ((y_norm + epsilon) * (x_norm + epsilon))
+    data_loss = torch.sum(mse_loss(u_full-y_full[...,-2:],reduction='none'), dim=(1,2)) / (x_norm + epsilon)
+    # data_loss = torch.sum(mse_loss(u_full-y_full[...,-2:],reduction='none'), dim=(1,2)) / ((y_norm + epsilon)*(x_norm + epsilon))**0.5
     data_loss = torch.mean(data_loss, dim = (0,2)) # avarge on the batchsize, signal and idler
     
     crystal_z_weights = crystal_z_weights.to(data_loss.device)
     data_loss_new = torch.sum(data_loss * crystal_z_weights)
     
-    data_loss_old = mse_loss(u_full-y_full[...,-2:])/mse_loss(y_full[...,-2:])
+    # data_loss_old = mse_loss(u_full-y_full[...,-2:])/mse_loss(y_full[...,-2:])
+    # data_loss = data_loss_new + data_loss_old
 
-    data_loss = data_loss_new + data_loss_old
+    data_loss = data_loss_new 
     gc.collect()
     torch.cuda.empty_cache()
 
