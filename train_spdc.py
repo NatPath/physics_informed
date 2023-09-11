@@ -219,8 +219,8 @@ def train_SPDC(model,
                         model, optimizer,scheduler,
                         epoch=e, best_val_yet=min_valid_loss)
         if (wandb and log) and draw: 
-            draw_spdc.draw_spdc_from_train(config,tmp_save_name,model,train_first_pump_dl,device,id,dl_train_or_validate='val')
-            draw_spdc.draw_spdc_from_train(config,tmp_save_name,model, val_first_pump_dl,device,id,dl_train_or_validate='train')
+            draw_spdc.draw_spdc_from_train(config,tmp_save_name,model,train_first_pump_dl,device,id,train_or_validate='val')
+            draw_spdc.draw_spdc_from_train(config,tmp_save_name,model, val_first_pump_dl,device,id,train_or_validate='train')
 
     print('Done!')
 
