@@ -2,8 +2,8 @@ from abc import ABC
 import jax.numpy as np
 
 from defaults import QUBIT
-from utils import DensMat
-from utils import (
+from correlation_utiles.utils_function import DensMat
+from correlation_utiles.utils_function import (
     projection_matrix_calc, projection_matrices_calc,
     decompose, fix_power, get_qubit_density_matrix, get_qutrit_density_matrix,
     coupling_inefficiency_calc_G2, coupling_inefficiency_calc_tomo,
@@ -11,9 +11,7 @@ from utils import (
 
 
 class corr_calc(ABC):
-    """
-    A differentiable SPDC forward model
-    """
+
 
     def __init__(
             self,
