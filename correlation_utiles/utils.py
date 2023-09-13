@@ -8,6 +8,14 @@ from defaults import qubit_projection_n_state2, \
 import math
 
 
+from typing import Tuple, Dict, Any, List, Union
+from spdc_inv.utils.utils import (
+    HermiteBank, LaguerreBank, TomographyBankLG, TomographyBankHG
+)
+from spdc_inv.utils.defaults import QUBIT, QUTRIT
+from spdc_inv.utils.defaults import qubit_projection_n_state2, \
+    qubit_tomography_dimensions, qutrit_projection_n_state2, qutrit_tomography_dimensions
+
 @jit
 def project(projection_basis, beam_profile):
     """
@@ -337,3 +345,379 @@ class DensMat(ABC):
                 counter = counter + 1
 
         return rot_mats_tensor, masks_tensor
+
+
+
+
+def LaguerreBank(
+        lam,
+        refractive_index,
+        W0,
+        max_mode_p,
+        max_mode_l,
+        x,
+        y,
+        z=0,
+        get_dict: bool = False,
+):
+    """
+    generates a dictionary of Laguerre Gauss basis functions
+
+    Parameters
+    ----------
+    lam; wavelength
+    refractive_index: refractive index
+    W0: beam waist
+    max_mode_p: maximum projection mode 1st axis
+    max_mode_l: maximum projection mode 2nd axis
+    x: transverse points, x axis
+    y: transverse points, y axis
+    z: projection longitudinal position
+    get_dict: (True/False) if True, the function will return a dictionary,
+              else the dictionary is splitted to basis functions np.array and list of dictionary keys.
+
+    Returns
+    -------
+    dictionary of Laguerre Gauss basis functions
+    """
+    Laguerre_dict = {}
+    for p in range(max_mode_p):
+        for l in range(-max_mode_l, max_mode_l + 1):
+            Laguerre_dict[f'|LG{p}{l}>'] = Laguerre_gauss(lam, refractive_index, W0, l, p, z, x, y)
+    if get_dict:
+        return Laguerre_dict
+
+    return np.array(list(Laguerre_dict.values())), [*Laguerre_dict]
+
+
+def TomographyBankLG(
+        lam,
+        refractive_index,
+        W0,
+        max_mode_p,
+        max_mode_l,
+        x,
+        y,
+        z=0,
+        relative_phase: List[Union[Union[int, float], Any]] = None,
+        tomography_quantum_state: str = None,
+):
+    """
+    generates a dictionary of basis function with projections into two orthogonal LG bases and mutually unbiased
+    bases (MUBs). The MUBs are constructed from superpositions of the two orthogonal LG bases.
+    according to: https://doi.org/10.1364/AOP.11.000067
+
+    Parameters
+    ----------
+    lam; wavelength
+    refractive_index: refractive index
+    W0: beam waist
+    max_mode_p: maximum projection mode 1st axis
+    max_mode_l: maximum projection mode 2nd axis
+    x: transverse points, x axis
+    y: transverse points, y axis
+    z: projection longitudinal position
+    relative_phase: The relative phase between the mutually unbiased bases (MUBs) states
+    tomography_quantum_state: the current quantum state we calculate it tomography matrix.
+                              currently we support: qubit/qutrit
+
+    Returns
+    -------
+    dictionary of bases functions used for constructing the tomography matrix
+    """
+
+    TOMO_dict = \
+        LaguerreBank(
+            lam,
+            refractive_index,
+            W0,
+            max_mode_p,
+            max_mode_l,
+            x, y, z,
+            get_dict=True)
+
+    if tomography_quantum_state is QUBIT:
+        del TOMO_dict['|LG00>']
+
+    LG_modes, LG_string = np.array(list(TOMO_dict.values())), [*TOMO_dict]
+
+    for m in range(len(TOMO_dict) - 1, -1, -1):
+        for n in range(m - 1, -1, -1):
+            for k in range(len(relative_phase)):
+                TOMO_dict[f'{LG_string[m]}+e^j{str(relative_phase[k]/np.pi)}π{LG_string[n]}'] = \
+                    (1 / np.sqrt(2)) * (LG_modes[m] + np.exp(1j * relative_phase[k]) * LG_modes[n])
+
+    return np.array(list(TOMO_dict.values())), [*TOMO_dict]
+
+def LaguerreP(p, l, x):
+    """
+    Generalized Laguerre polynomial of rank p,l L_p^|l|(x)
+
+    Parameters
+    ----------
+    l, p: order of the LG beam
+    x: matrix of x
+
+    Returns
+    -------
+    Generalized Laguerre polynomial
+    """
+    if p == 0:
+        return 1
+    elif p == 1:
+        return 1 + np.abs(l)-x
+    else:
+        return ((2*p-1+np.abs(l)-x)*LaguerreP(p-1, l, x) - (p-1+np.abs(l))*LaguerreP(p-2, l, x))/p
+
+
+def Laguerre_gauss(lam, refractive_index, W0, l, p, z, x, y, coef=None):
+    """
+    Laguerre Gauss in 2D
+
+    Parameters
+    ----------
+    lam: wavelength
+    refractive_index: refractive index
+    W0: beam waists
+    l, p: order of the LG beam
+    z: the place in z to calculate for
+    x,y: matrices of x and y
+    coef
+
+    Returns
+    -------
+    Laguerre-Gaussian beam of order l,p in 2D
+    """
+    k = 2 * np.pi * refractive_index / lam
+    z0 = np.pi * W0 ** 2 * refractive_index / lam  # Rayleigh range
+    Wz = W0 * np.sqrt(1 + (z / z0) ** 2)  # w(z), the variation of the spot size
+    r = np.sqrt(x**2 + y**2)
+    phi = np.arctan2(y, x)
+
+    invR = z / ((z ** 2) + (z0 ** 2))  # radius of curvature
+    gouy = (np.abs(l)+2*p+1)*np.arctan(z/z0)
+    if coef is None:
+        coef = np.sqrt(2*math.factorial(p)/(np.pi * math.factorial(p + np.abs(l))))
+
+    U = coef * \
+        (W0/Wz)*(r*np.sqrt(2)/Wz)**(np.abs(l)) * \
+        np.exp(-r**2 / Wz**2) * \
+        LaguerreP(p, l, 2 * r**2 / Wz**2) * \
+        np.exp(-1j * (k * r**2 / 2) * invR) * \
+        np.exp(-1j * l * phi) * \
+        np.exp(1j * gouy)
+    return U
+
+
+
+class Projection_coincidence_rate(ABC):
+    """
+    A class that represents the projective basis for
+    calculating the coincidence rate observable of the interaction.
+    """
+
+    def __init__(
+            self,
+            waist_pump0: float,
+            signal_wavelength: float,
+            crystal_x: np.array,
+            crystal_y: np.array,
+            temperature: float,
+            ctype,
+            polarization: str,
+            z: float = 0.,
+            projection_basis: str = 'LG',
+            max_mode1: int = 1,
+            max_mode2: int = 4,
+            waist: float = None,
+            wavelength:  float = None,
+            tau: float = 1e-9,
+            SMF_waist: float = None,
+
+    ):
+        """
+
+        Parameters
+        ----------
+        waist_pump0: pump waists at the center of the crystal (initial-before training)
+        signal_wavelength: signal wavelength at spdc interaction
+        crystal_x: x axis linspace array (transverse)
+        crystal_y: y axis linspace array (transverse)
+        temperature: interaction temperature
+        ctype: refractive index function
+        polarization: polarization for calculating effective refractive index
+        z: projection longitudinal position
+        projection_basis: type of projection basis
+                          Can be: LG (Laguerre-Gauss) / HG (Hermite-Gauss)
+        max_mode1: Maximum value of first mode of the 2D projection basis
+        max_mode2: Maximum value of second mode of the 2D projection basis
+        waist: waists of the projection basis functions
+        wavelength: wavelength for generating projection basis
+        tau: coincidence window [nano sec]
+        SMF_waist: signal/idler beam radius at single mode fibre
+        """
+
+        self.tau = tau
+
+        if waist is None:
+            self.waist = np.sqrt(2) * waist_pump0
+        else:
+            self.waist = waist
+
+        if wavelength is None:
+            wavelength = signal_wavelength
+
+        assert projection_basis.lower() in ['lg', 'hg'], 'The projection basis is LG or HG ' \
+                                                         'basis functions only'
+
+        self.projection_basis = projection_basis
+        self.max_mode1 = max_mode1
+        self.max_mode2 = max_mode2
+
+        # number of modes for projection basis
+        if projection_basis.lower() == 'lg':
+            self.projection_n_modes1 = max_mode1
+            self.projection_n_modes2 = 2 * max_mode2 + 1
+        else:
+            self.projection_n_modes1 = max_mode1
+            self.projection_n_modes2 = max_mode2
+
+        # Total number of projection modes
+        self.projection_n_modes = self.projection_n_modes1 * self.projection_n_modes2
+
+        refractive_index = ctype(wavelength * 1e6, temperature, polarization)
+        [x, y] = np.meshgrid(crystal_x, crystal_y)
+
+        self.SMF_waist = SMF_waist
+
+        if True:
+            if projection_basis.lower() == 'lg':
+                self.basis_arr, self.basis_str = \
+                    LaguerreBank(
+                        wavelength,
+                        refractive_index,
+                        self.waist,
+                        self.max_mode1,
+                        self.max_mode2,
+                        x, y, z)
+            else:
+                self.basis_arr, self.basis_str = \
+                    HermiteBank(
+                        wavelength,
+                        refractive_index,
+                        self.waist,
+                        self.max_mode1,
+                        self.max_mode2,
+                        x, y, z)
+
+
+class Projection_tomography_matrix(ABC):
+    """
+    A class that represents the projective basis for
+    calculating the tomography matrix & density matrix observable of the interaction.
+    """
+
+    def __init__(
+            self,
+            waist_pump0: float,
+            signal_wavelength: float,
+            crystal_x: np.array,
+            crystal_y: np.array,
+            temperature: float,
+            ctype,
+            polarization: str,
+            z: float = 0.,
+            projection_basis: str = 'LG',
+            max_mode1: int = 1,
+            max_mode2: int = 1,
+            waist: float = None,
+            wavelength:  float = None,
+            tau: float = 1e-9,
+            relative_phase: List[Union[Union[int, float], Any]] = None,
+            tomography_quantum_state: str = None,
+
+    ):
+        """
+
+        Parameters
+        ----------
+        waist_pump0: pump waists at the center of the crystal (initial-before training)
+        signal_wavelength: signal wavelength at spdc interaction
+        crystal_x: x axis linspace array (transverse)
+        crystal_y: y axis linspace array (transverse)
+        temperature: interaction temperature
+        ctype: refractive index function
+        polarization: polarization for calculating effective refractive index
+        z: projection longitudinal position
+        projection_basis: type of projection basis
+                          Can be: LG (Laguerre-Gauss)
+        max_mode1: Maximum value of first mode of the 2D projection basis
+        max_mode2: Maximum value of second mode of the 2D projection basis
+        waist: waists of the projection basis functions
+        wavelength: wavelength for generating projection basis
+        tau: coincidence window [nano sec]
+        relative_phase: The relative phase between the mutually unbiased bases (MUBs) states
+        tomography_quantum_state: the current quantum state we calculate it tomography matrix.
+                                  currently we support: qubit/qutrit
+        """
+
+        self.tau = tau
+
+        if waist is None:
+            self.waist = np.sqrt(2) * waist_pump0
+        else:
+            self.waist = waist
+
+        if wavelength is None:
+            wavelength = signal_wavelength
+
+        assert projection_basis.lower() in ['lg', 'hg'], 'The projection basis is LG or HG' \
+                                                         'basis functions only'
+
+        assert max_mode1 == 1, 'for Tomography projections, max_mode1 must be 1'
+        assert max_mode2 == 1, 'for Tomography projections, max_mode2 must be 1'
+
+        self.projection_basis = projection_basis
+        self.max_mode1 = max_mode1
+        self.max_mode2 = max_mode2
+
+        assert tomography_quantum_state in [QUBIT, QUTRIT], f'quantum state must be {QUBIT} or {QUTRIT}, ' \
+                                                            'but received {tomography_quantum_state}'
+        self.tomography_quantum_state = tomography_quantum_state
+        self.relative_phase = relative_phase
+
+        self.projection_n_state1 = 1
+        if self.tomography_quantum_state is QUBIT:
+            self.projection_n_state2 = qubit_projection_n_state2
+            self.tomography_dimensions = qubit_tomography_dimensions
+        else:
+            self.projection_n_state2 = qutrit_projection_n_state2
+            self.tomography_dimensions = qutrit_tomography_dimensions
+
+        refractive_index = ctype(wavelength * 1e6, temperature, polarization)
+        [x, y] = np.meshgrid(crystal_x, crystal_y)
+        if True:
+            if self.projection_basis == 'lg':
+                self.basis_arr, self.basis_str = \
+                    TomographyBankLG(
+                        wavelength,
+                        refractive_index,
+                        self.waist,
+                        self.max_mode1,
+                        self.max_mode2,
+                        x, y, z,
+                        self.relative_phase,
+                        self.tomography_quantum_state
+                    )
+            else:
+                self.basis_arr, self.basis_str = \
+                    TomographyBankHG(
+                        wavelength,
+                        refractive_index,
+                        self.waist,
+                        self.max_mode1,
+                        self.max_mode2,
+                        x, y, z,
+                        self.relative_phase,
+                        self.tomography_quantum_state
+                    )

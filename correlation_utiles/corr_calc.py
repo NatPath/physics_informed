@@ -10,7 +10,7 @@ from utils import (
 )
 
 
-class SPDCmodel(ABC):
+class corr_calc(ABC):
     """
     A differentiable SPDC forward model
     """
@@ -22,7 +22,6 @@ class SPDCmodel(ABC):
             idler,
             projection_coincidence_rate,
             projection_tomography_matrix,
-            interaction,
             coincidence_rate_observable: bool = True,
             density_matrix_observable: bool = True,
             tomography_matrix_observable: bool = False,
@@ -34,11 +33,9 @@ class SPDCmodel(ABC):
         self.idler = idler
         self.projection_coincidence_rate = projection_coincidence_rate
         self.projection_tomography_matrix = projection_tomography_matrix
-        self.interaction = interaction
         self.coincidence_rate_observable = coincidence_rate_observable
         self.density_matrix_observable = density_matrix_observable
         self.tomography_matrix_observable = tomography_matrix_observable
-
         self.coupling_inefficiencies = coupling_inefficiencies
 
         self.N = None
