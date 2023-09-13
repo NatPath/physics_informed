@@ -3,6 +3,7 @@ import jax.numpy as np
 from jax import lax
 from jax import jit
 from jax.ops import  index_add, index
+from jax.numpy.ndarray import  at
 from typing import List, Union, Any
 import math
 from defaults import qubit_projection_n_state2, \
