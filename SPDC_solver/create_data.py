@@ -5,7 +5,7 @@ import pickle
 from tqdm import tqdm
 
 
-def single_mode(p,l,config,N_samples,seed):
+def single_mode(p,l,config,N_samples,seed,crystal_coef):
     '''
     creates a solution of a single mode of pump given by p,l
     Args:
@@ -27,7 +27,7 @@ def single_mode(p,l,config,N_samples,seed):
     A.solve()
     return A.data
 
-def multi_modes(config,N_samples,spp,seed):
+def multi_modes(config,N_samples,spp,seed,crystal_coef):
     '''
     creates a solution of a single mode with spp vac modes for N_samples//spp modes
     Args:
@@ -45,7 +45,7 @@ def multi_modes(config,N_samples,spp,seed):
 
     while idx < number_of_modes:
         while (row >= 0) and (idx < number_of_modes):
-            data = single_mode(p=row, l=col, config=config ,N_samples=spp, seed=(seed+idx))
+            data = single_mode(p=row, l=col, config=config ,N_samples=spp, seed=(seed+idx),crystal_coef=crystal_coef)
             if idx==0:
                 fields = data["fields"]
             else: 
@@ -103,7 +103,7 @@ def fixed_pump_single_mode(N_samples, config ,p,l, loc = None, seed = 1701,cryst
         file_name = str(f"{default_loc}/{file_name}")
 
     print(f"Creating data: only a single mode, p={p}, l={l}")
-    data = single_mode(p = p,l = l,config = config,N_samples = N_samples, seed = seed)
+    data = single_mode(p = p,l = l,config = config,N_samples = N_samples, seed = seed,crystal_coef=crystal_coef)
 
     save_data(data,file_name)
 
