@@ -74,11 +74,19 @@ def coincidence_rate_plots(
     coincidence_rate_reduced = coincidence_rate * \
                                projection_coincidence_rate.tau / (g1_ii_normalization * g1_ss_normalization)
 
+
+    n = projection_coincidence_rate.max_mode2
+    loc = range(coincidence_rate.shape[0])
+    ticks = [str(t)  for t in range(-n,n+1)]
     # plot coincidence_rate 2d
-    plt.imshow(coincidence_rate_reduced)
+    # plt.imshow(coincidence_rate_reduced) # actual number
+    plt.imshow(coincidence_rate) # probability
     plt.xlabel(r'signal mode i')
     plt.ylabel(r'idle mode j')
+    plt.xticks(loc,ticks)
+    plt.yticks(loc,ticks)
     plt.colorbar()
+
 
     plt.savefig(os.path.join(results_dir, 'coincidence_rate'))
     plt.close()
@@ -105,10 +113,15 @@ def tomography_matrix_plots(
     tomography_matrix_reduced = tomography_matrix * \
                                 projection_tomography_matrix.tau / (g1_ii_normalization * g1_ss_normalization)
 
+    n = projection_tomography_matrix.max_mode2
+    loc = range(tomography_matrix.shape[0])
+    ticks = [str(t)  for t in range(-n,n+1)]
     # plot tomography_matrix 2d
     plt.imshow(tomography_matrix_reduced)
     plt.xlabel(r'signal mode i')
     plt.ylabel(r'idle mode j')
+    plt.xticks(loc,ticks)
+    plt.yticks(loc,ticks)
     plt.colorbar()
 
     plt.savefig(os.path.join(results_dir, 'tomography_matrix'))
@@ -123,9 +136,15 @@ def density_matrix_plots(
     density_matrix_real = onp.real(density_matrix)
     density_matrix_imag = onp.imag(density_matrix)
 
+    n = density_matrix.shape[0] // 2
+    loc = range(density_matrix.shape[0])
+    ticks = [str(t)  for t in range(-n,n+1)]
+
     plt.imshow(density_matrix_real)
     plt.xlabel(r'signal mode i')
     plt.ylabel(r'idle mode j')
+    plt.xticks(loc,ticks)
+    plt.yticks(loc,ticks)
     plt.colorbar()
     plt.savefig(os.path.join(results_dir, 'density_matrix_real'))
     plt.close()
@@ -133,6 +152,8 @@ def density_matrix_plots(
     plt.imshow(density_matrix_imag)
     plt.xlabel(r'signal mode i')
     plt.ylabel(r'idle mode j')
+    plt.xticks(loc,ticks)
+    plt.yticks(loc,ticks)
     plt.colorbar()
     plt.savefig(os.path.join(results_dir, 'density_matrix_imag'))
     plt.close()

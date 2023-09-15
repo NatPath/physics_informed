@@ -8,8 +8,9 @@ import numpy as onp
 
 # get fields from spdc-pino-net
 
-
-datapath = "/home/dor-hay.sha/project/data/spdc/fixed_pump_N-100_seed-1701.bin"
+calc_tomography = False
+# datapath = "/home/dor-hay.sha/project/data/spdc/fixed_pump_N-100_seed-1701.bin"
+datapath = '/home/dor-hay.sha/project/data/spdc/single_mode-(0,3)_N-100_seed-123.bin'
 with open(file=datapath,mode="rb") as file:
     data = pickle.load(file)
 
@@ -74,7 +75,7 @@ corr_calc = corr_calc(
             projection_tomography_matrix = projection_tomography_matrix,
             coincidence_rate_observable = True,
             density_matrix_observable = True,
-            tomography_matrix_observable = True,
+            tomography_matrix_observable = calc_tomography,
             coupling_inefficiencies = False,
     
 )
@@ -82,8 +83,8 @@ corr_calc = corr_calc(
 observables = corr_calc.get_observables()
 
 save_results(
-        run_name = "test_run",
-        observable_vec = {COINCIDENCE_RATE: True, DENSITY_MATRIX: True, TOMOGRAPHY_MATRIX: True},
+        run_name = "single_mode-(0,3)_N-100_seed-123",
+        observable_vec = {COINCIDENCE_RATE: True, DENSITY_MATRIX: True, TOMOGRAPHY_MATRIX: calc_tomography},
         observables = observables,
         projection_coincidence_rate = projection_coincidence_rate,
         projection_tomography_matrix = projection_tomography_matrix,
