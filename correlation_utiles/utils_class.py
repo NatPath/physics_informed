@@ -2,13 +2,13 @@ from abc import ABC
 import jax.numpy as np
 from jax import lax
 from jax import jit
-from jax.ops import  index_add, index
-from jax.numpy.ndarray import  at
+# from jax.numpy.ndarray import  at
+from jax.numpy import index_exp
 from typing import List, Union, Any
 import math
 from defaults import qubit_projection_n_state2, \
     qubit_tomography_dimensions, qutrit_projection_n_state2, qutrit_tomography_dimensions, QUBIT, QUTRIT
-from utils_function import LaguerreBank
+from utils_function import LaguerreBank, TomographyBankLG
 
 class DensMat(ABC):
     """
@@ -89,10 +89,10 @@ class DensMat(ABC):
                 norm2 = np.trace(mats[n] @ mats[n])
                 mat1 = mats[m] / norm1
                 mat2 = mats[n] / norm2
-                rot_mats_tensor = index_add(rot_mats_tensor, index[counter, :, :], np.kron(mat1, mat2))
+                rot_mats_tensor = rot_mats_tensor.at[index_exp[counter, :, :]].add(np.kron(mat1, mat2))
                 mask = np.dot(vecs[m].reshape(self.projection_n_state2, 1),
                               np.transpose((vecs[n]).reshape(self.projection_n_state2, 1)))
-                masks_tensor = index_add(masks_tensor, index[counter, :, :], mask)
+                masks_tensor = masks_tensor.at[index_exp[counter, :, :]].add(mask)
                 counter = counter + 1
 
         return rot_mats_tensor, masks_tensor
@@ -286,7 +286,7 @@ class Projection_tomography_matrix(ABC):
         refractive_index = ctype(wavelength * 1e6, temperature, polarization)
         [x, y] = np.meshgrid(crystal_x, crystal_y)
         if True:
-            if self.projection_basis == 'lg':
+            if self.projection_basis.lower() == 'lg':
                 self.basis_arr, self.basis_str = \
                     TomographyBankLG(
                         wavelength,

@@ -5,6 +5,8 @@ from jax import jit
 from defaults import qubit_projection_n_state2, \
     qubit_tomography_dimensions, qutrit_projection_n_state2, qutrit_tomography_dimensions, QUBIT, QUTRIT
 import math
+from typing import List, Union, Any
+
 
 
 
@@ -46,9 +48,50 @@ def n_KTP_Kato(
     return n
 
 
+def propagate(A, x, y, k, dz):
+    """
+    Free Space propagation using the free space transfer function,
+    (two  dimensional), according to Saleh
+    Using CGS, or MKS, Boyd 2nd eddition
+
+    Parameters
+    ----------
+    A: electromagnetic beam profile
+    x,y: spatial vectors
+    k: wave vector
+    dz: The distance to propagate
+
+    Returns the propagated field
+    -------
+
+    """
+    dx      = np.abs(x[1] - x[0])
+    dy      = np.abs(y[1] - y[0])
+
+    # define the fourier vectors
+    X, Y    = np.meshgrid(x, y, indexing='ij')
+    KX      = 2 * np.pi * (X / dx) / (np.size(X, 1) * dx)
+    KY      = 2 * np.pi * (Y / dy) / (np.size(Y, 1) * dy)
+
+    # The Free space transfer function of propagation, using the Fresnel approximation
+    # (from "Engineering optics with matlab"/ing-ChungPoon&TaegeunKim):
+    H_w = np.exp(-1j * dz * (np.square(KX) + np.square(KY)) / (2 * k))
+    H_w = np.fft.ifftshift(H_w)
+
+    # Fourier Transform: move to k-space
+    G = np.fft.fft2(A)  # The two-dimensional discrete Fourier transform (DFT) of A.
+
+    # propoagte in the fourier space
+    F = np.multiply(G, H_w)
+
+    # inverse Fourier Transform: go back to real space
+    Eout = np.fft.ifft2(F)  # [in real space]. E1 is the two-dimensional INVERSE discrete Fourier transform (DFT) of F1
+
+    return Eout
 
 
-@jit
+
+#@jit
 def project(projection_basis, beam_profile):
     """
     The function projects some state beam_profile onto given projection_basis
@@ -71,7 +114,7 @@ def project(projection_basis, beam_profile):
     return projection
 
 
-@jit
+#@jit
 def decompose(beam_profile, projection_basis_arr):
     """
     Decompose a given beam profile into modes defined in the dictionary
@@ -88,7 +131,7 @@ def decompose(beam_profile, projection_basis_arr):
     return np.transpose(projection)
 
 
-@jit
+#@jit
 def fix_power(decomposed_profile, beam_profile):
     """
     Normalize power and ignore higher modes
@@ -108,7 +151,7 @@ def fix_power(decomposed_profile, beam_profile):
     return decomposed_profile * scale[:, None, None]
 
 
-@jit
+#@jit
 def kron(a, b, multiple_devices: bool = False):
     """
     Calculates the kronecker product between two 2d tensors
@@ -128,7 +171,7 @@ def kron(a, b, multiple_devices: bool = False):
         return (a[:, :, None, :, None] * b[:, None, :, None, :]).sum(0)
 
 
-@jit
+#@jit
 def projection_matrices_calc(a, b, c, N):
     """
 
@@ -151,7 +194,7 @@ def projection_matrices_calc(a, b, c, N):
     return G1_ss, G1_ii, G1_si, G1_si_dagger, Q_si, Q_si_dagger
 
 
-@jit
+#@jit
 def projection_matrix_calc(G1_ss, G1_ii, G1_si, G1_si_dagger, Q_si, Q_si_dagger):
     """
 
@@ -162,17 +205,24 @@ def projection_matrix_calc(G1_ss, G1_ii, G1_si, G1_si_dagger, Q_si, Q_si_dagger)
     -------
 
     """
-    return (lax.psum(G1_ii, 'device') *
-            lax.psum(G1_ss, 'device') +
-            lax.psum(Q_si_dagger, 'device') *
-            lax.psum(Q_si, 'device') +
-            lax.psum(G1_si_dagger, 'device') *
-            lax.psum(G1_si, 'device')
+    # return (lax.psum(G1_ii, 'device') *
+    #         lax.psum(G1_ss, 'device') +
+    #         lax.psum(Q_si_dagger, 'device') *
+    #         lax.psum(Q_si, 'device') +
+    #         lax.psum(G1_si_dagger, 'device') *
+    #         lax.psum(G1_si, 'device')
+    #         ).real
+
+    return (G1_ii *
+            G1_ss +
+            Q_si_dagger *
+            Q_si +
+            G1_si_dagger *
+            G1_si
             ).real
 
-
 # for coupling inefficiencies
-@jit
+#@jit
 def coupling_inefficiency_calc_G2(
         lam,
         SMF_waist,
@@ -196,7 +246,7 @@ def coupling_inefficiency_calc_G2(
     return inef_coeff.reshape(1, (2 * max_mode_l + 1) ** 2)
 
 
-@jit
+#@jit
 def coupling_inefficiency_calc_tomo(
         lam,
         SMF_waist,
@@ -257,7 +307,7 @@ def coupling_inefficiency_calc_tomo(
     return inef_coeff.reshape(1, qutrit_projection_n_state2 ** 2)
 
 
-@jit
+#@jit
 def get_qubit_density_matrix(
         tomography_matrix,
         masks,
@@ -274,7 +324,7 @@ def get_qubit_density_matrix(
     return dens_mat
 
 
-@jit
+#@jit
 def get_qutrit_density_matrix(
         tomography_matrix,
         masks,

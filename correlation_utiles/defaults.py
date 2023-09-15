@@ -58,7 +58,7 @@ class params():
             tomography_projection_wavelength: float = None,
             tomography_projection_polarization: str = 'y',
             tomography_projection_z: float = 0.,
-            tomography_quantum_state: str = 'qubit'
+            tomography_quantum_state: str = 'qutrit'
         ):
               
             self.coupling_inefficiencies=coupling_inefficiencies

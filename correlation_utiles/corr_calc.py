@@ -2,22 +2,21 @@ from abc import ABC
 import jax.numpy as np
 
 from defaults import QUBIT
-from correlation_utiles.utils_function import DensMat
-from correlation_utiles.utils_function import (
-    projection_matrix_calc, projection_matrices_calc,
-    decompose, fix_power, get_qubit_density_matrix, get_qutrit_density_matrix,
-    coupling_inefficiency_calc_G2, coupling_inefficiency_calc_tomo,
-)
-
+from utils_class import DensMat
+from utils_function import *
+    
 
 class corr_calc(ABC):
 
 
     def __init__(
             self,
-            pump,
-            signal,
-            idler,
+            idler_out,
+            idler_vac,
+            signal_out,
+            signal_k: float,
+            idler_k: float,
+            shape,
             projection_coincidence_rate,
             projection_tomography_matrix,
             coincidence_rate_observable: bool = True,
@@ -26,9 +25,12 @@ class corr_calc(ABC):
             coupling_inefficiencies: bool = False,
     ):
 
-        self.pump = pump
-        self.signal = signal
-        self.idler = idler
+        self.idler_out = idler_out
+        self.idler_vac = idler_vac
+        self.signal_out = signal_out
+        self.signal_k = signal_k
+        self.idler_k = idler_k
+        self.shape = shape
         self.projection_coincidence_rate = projection_coincidence_rate
         self.projection_tomography_matrix = projection_tomography_matrix
         self.coincidence_rate_observable = coincidence_rate_observable
@@ -36,21 +38,15 @@ class corr_calc(ABC):
         self.tomography_matrix_observable = tomography_matrix_observable
         self.coupling_inefficiencies = coupling_inefficiencies
 
-        self.N = None
-        self.N_device = None
+        self.N = idler_out.shape[0]
+        self.N_device = 1
 
 
 
     
 
     def get_1st_order_projections(
-            self,
-            signal_out,
-            idler_out,
-            idler_vac,
-            signal_out_back_prop,
-            idler_out_back_prop,
-            idler_vac_back_prop,
+            self
     ):
         """
         the function calculates first order correlation functions.
@@ -66,6 +62,33 @@ class corr_calc(ABC):
         -------
 
         """
+        signal_out = self.signal_out
+        idler_out = self.idler_out
+        idler_vac = self.idler_vac
+        DeltaZ = - self.shape.maxZ / 2  # DeltaZ: longitudinal middle of the crystal (with negative sign).
+        # To propagate generated fields back to the middle of the crystal
+        # Propagate generated fields back to the middle of the crystal
+        signal_out_back_prop = propagate(signal_out,
+                            self.shape.x,
+                            self.shape.y,
+                            self.signal_k,
+                            DeltaZ
+                            ) * np.exp(-1j * self.signal_k * DeltaZ)
+
+        idler_out_back_prop  = propagate(idler_out,
+                            self.shape.x,
+                            self.shape.y,
+                            self.idler_k,
+                            DeltaZ
+                            ) * np.exp(-1j * self.idler_k * DeltaZ)
+
+        idler_vac_back_prop  = propagate(idler_vac,
+                            self.shape.x,
+                            self.shape.y,
+                            self.idler_k,
+                            DeltaZ
+                                        ) * np.exp(-1j * self.idler_k * DeltaZ)
+
 
         coincidence_rate_projections, tomography_matrix_projections = None, None
         if self.coincidence_rate_observable:
@@ -128,7 +151,6 @@ class corr_calc(ABC):
         -------
 
         """
-
         signal_beam_decompose, idler_beam_decompose, idler_vac_decompose = \
             self.decompose(
                 signal_out,
@@ -168,7 +190,7 @@ class corr_calc(ABC):
             signal_out_back_prop,
             basis_arr
         ).reshape(
-            self.N_device,
+            self.N,
             projection_n_1,
             projection_n_2)
 
@@ -176,7 +198,7 @@ class corr_calc(ABC):
             idler_out_back_prop,
             basis_arr
         ).reshape(
-            self.N_device,
+            self.N,
             projection_n_1,
             projection_n_2)
 
@@ -184,7 +206,7 @@ class corr_calc(ABC):
             idler_vac_back_prop,
             basis_arr
         ).reshape(
-            self.N_device,
+            self.N,
             projection_n_1,
             projection_n_2)
 
@@ -198,17 +220,7 @@ class corr_calc(ABC):
     def get_observables(
             self,
     ):
-        coincidence_rate_projections, tomography_matrix_projections = \
-            self.get_1st_order_projections(
-                signal_out,
-                idler_out,
-                idler_vac,
-                signal_out_back_prop,
-                idler_out_back_prop,
-                idler_vac_back_prop,
-
-
-            )
+        coincidence_rate_projections, tomography_matrix_projections = self.get_1st_order_projections()
         coincidence_rate, density_matrix, tomography_matrix = None, None, None
 
         if self.coincidence_rate_observable:
