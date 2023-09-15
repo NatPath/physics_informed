@@ -17,6 +17,9 @@ c       = 2.99792458e8  # speed of light [meter/sec]
 eps0    = 8.854187817e-12  # vacuum permittivity [Farad/meter]
 h_bar   = 1.054571800e-34  # [m^2 kg / s], taken from http://physics.nist.gov/cgi-bin/cuu/Value?hbar|search_for=planck
 
+G1_Normalization        = lambda w: h_bar * w / (2 * eps0 * c)
+SFG_idler_wavelength    = lambda lambda_p, lambda_s: lambda_p * lambda_s / (lambda_s - lambda_p)
+
 def n_KTP_Kato(
         lam: float,
         T: float,

@@ -10,6 +10,7 @@ qubit_tomography_dimensions = 2
 qutrit_projection_n_state2 = 15
 qutrit_tomography_dimensions = 3
 
+SFG_idler_wavelength    = lambda lambda_p, lambda_s: lambda_p * lambda_s / (lambda_s - lambda_p)
 
 class params():
         def __init__(
@@ -106,7 +107,9 @@ class params():
             self.tomography_projection_polarization=tomography_projection_polarization
             self.tomography_projection_z=tomography_projection_z
             self.tomography_quantum_state=tomography_quantum_state
-                
+            self.lam_signal = 2 * lam_pump
+            self.lam_idler = SFG_idler_wavelength(self.lam_pump, self.lam_signal)
+
 
 """
 

@@ -1,6 +1,5 @@
-from spdc_inv.utils.defaults import COINCIDENCE_RATE, DENSITY_MATRIX, TOMOGRAPHY_MATRIX
-from spdc_inv.utils.utils import G1_Normalization
-from spdc_inv import RES_DIR
+from defaults import COINCIDENCE_RATE, DENSITY_MATRIX, TOMOGRAPHY_MATRIX
+from utils_function import G1_Normalization
 from jax import numpy as np
 
 import os
@@ -8,91 +7,7 @@ import shutil
 import numpy as onp
 import matplotlib.pyplot as plt
 
-
-def save_training_statistics(
-        logs_dir,
-        fit_results,
-        interaction,
-        model_parameters,
-):
-    if fit_results is not None:
-        loss_trn, best_loss = fit_results
-
-    pump_coeffs_real, \
-    pump_coeffs_imag, \
-    waist_pump, \
-    crystal_coeffs_real, \
-    crystal_coeffs_imag, \
-    r_scale = model_parameters
-
-    pump = open(os.path.join(logs_dir, 'pump.txt'), 'w')
-    pump.write(
-        type_coeffs_to_txt(
-            interaction.pump_basis,
-            interaction.pump_max_mode1,
-            interaction.pump_max_mode2,
-            pump_coeffs_real[0] if pump_coeffs_real is not None
-            else interaction.initial_pump_coefficients()[0],
-            pump_coeffs_imag[0] if pump_coeffs_imag is not None
-            else interaction.initial_pump_coefficients()[1],
-            waist_pump[0] if waist_pump is not None
-            else interaction.initial_pump_waists(),
-        )
-    )
-
-    if interaction.crystal_basis:
-
-        crystal = open(os.path.join(logs_dir, 'crystal.txt'), 'w')
-        crystal.write(
-            type_coeffs_to_txt(
-                interaction.crystal_basis,
-                interaction.crystal_max_mode1,
-                interaction.crystal_max_mode2,
-                crystal_coeffs_real[0] if crystal_coeffs_real is not None
-                else interaction.initial_crystal_coefficients()[0],
-                crystal_coeffs_imag[0] if crystal_coeffs_imag is not None
-                else interaction.initial_crystal_coefficients()[1],
-                r_scale[0] if r_scale is not None
-                else interaction.initial_crystal_waists(),
-            )
-        )
-
-    if fit_results is not None:
-        # print loss
-        plt.plot(loss_trn, 'r', label='training')
-        plt.ylabel('objective loss')
-        plt.xlabel('#epoch')
-        # plt.ylim(0.2, 1)
-        plt.axhline(y=best_loss, color='gray', linestyle='--')
-        plt.text(2, best_loss, f'best = {best_loss}', rotation=0, horizontalalignment='left',
-                 verticalalignment='top', multialignment='center')
-        plt.legend()
-        plt.savefig(os.path.join(logs_dir, 'loss'))
-        plt.close()
-
-    np.save(os.path.join(logs_dir, 'parameters_pump_real.npy'),
-            pump_coeffs_real[0] if pump_coeffs_real is not None
-            else interaction.initial_pump_coefficients()[0])
-    np.save(os.path.join(logs_dir, 'parameters_pump_imag.npy'),
-            pump_coeffs_imag[0] if pump_coeffs_imag is not None
-            else interaction.initial_pump_coefficients()[1])
-    np.save(os.path.join(logs_dir, 'parameters_pump_waists.npy'),
-            waist_pump[0] if waist_pump is not None
-            else interaction.initial_pump_waists())
-    if interaction.crystal_basis is not None:
-        np.save(os.path.join(logs_dir, 'parameters_crystal_real.npy'),
-                crystal_coeffs_real[0] if crystal_coeffs_real is not None
-                else interaction.initial_crystal_coefficients()[0])
-        np.save(os.path.join(logs_dir, 'parameters_crystal_imag.npy'),
-                crystal_coeffs_imag[0] if crystal_coeffs_imag is not None
-                else interaction.initial_crystal_coefficients()[1])
-        np.save(os.path.join(logs_dir, 'parameters_crystal_effective_waists.npy'),
-                r_scale[0] if r_scale is not None
-                else interaction.initial_crystal_waists()
-                )
-
-    return
-
+RES_DIR = "tmp_fig"
 
 def save_results(
         run_name,
@@ -100,8 +15,8 @@ def save_results(
         observables,
         projection_coincidence_rate,
         projection_tomography_matrix,
-        Signal,
-        Idler,
+        signal_w,
+        idler_w,
 ):
     results_dir = os.path.join(RES_DIR, run_name)
     if os.path.exists(results_dir):
@@ -113,20 +28,17 @@ def save_results(
     if observable_vec[COINCIDENCE_RATE]:
         coincidence_rate = coincidence_rate[0]
         coincidence_rate = coincidence_rate / np.sum(np.abs(coincidence_rate))
-        np.save(os.path.join(results_dir, 'coincidence_rate.npy'), coincidence_rate)
         coincidence_rate_plots(
             results_dir,
             coincidence_rate,
             projection_coincidence_rate,
-            Signal,
-            Idler,
+            signal_w,
+            idler_w,
         )
 
     if observable_vec[DENSITY_MATRIX]:
-        density_matrix = density_matrix[0]
+        # density_matrix = density_matrix[0]
         density_matrix = density_matrix / np.trace(np.real(density_matrix))
-        np.save(os.path.join(results_dir, 'density_matrix_real.npy'), onp.real(density_matrix))
-        np.save(os.path.join(results_dir, 'density_matrix_imag.npy'), onp.imag(density_matrix))
         density_matrix_plots(
             results_dir,
             density_matrix,
@@ -135,13 +47,12 @@ def save_results(
     if observable_vec[TOMOGRAPHY_MATRIX]:
         tomography_matrix = tomography_matrix[0]
         tomography_matrix = tomography_matrix / np.sum(np.abs(tomography_matrix))
-        np.save(os.path.join(results_dir, 'tomography_matrix.npy'), tomography_matrix)
         tomography_matrix_plots(
             results_dir,
             tomography_matrix,
             projection_tomography_matrix,
-            Signal,
-            Idler,
+            signal_w,
+            idler_w,
         )
 
 
@@ -149,18 +60,17 @@ def coincidence_rate_plots(
         results_dir,
         coincidence_rate,
         projection_coincidence_rate,
-        Signal,
-        Idler,
+        signal_w,
+        idler_w,
 ):
     # coincidence_rate = unwrap_kron(coincidence_rate,
     #                                projection_coincidence_rate.projection_n_modes1,
     #                                projection_coincidence_rate.projection_n_modes2)
-    coincidence_rate = coincidence_rate[0, :].\
-        reshape(projection_coincidence_rate.projection_n_modes2, projection_coincidence_rate.projection_n_modes2)
+    coincidence_rate = coincidence_rate.reshape(projection_coincidence_rate.projection_n_modes2, projection_coincidence_rate.projection_n_modes2)
 
     # Compute and plot reduced coincidence_rate
-    g1_ss_normalization = G1_Normalization(Signal.w)
-    g1_ii_normalization = G1_Normalization(Idler.w)
+    g1_ss_normalization = G1_Normalization(signal_w)
+    g1_ii_normalization = G1_Normalization(idler_w)
     coincidence_rate_reduced = coincidence_rate * \
                                projection_coincidence_rate.tau / (g1_ii_normalization * g1_ss_normalization)
 
@@ -178,20 +88,19 @@ def tomography_matrix_plots(
         results_dir,
         tomography_matrix,
         projection_tomography_matrix,
-        Signal,
-        Idler,
+        signal_w,
+        idler_w,
 ):
 
     # tomography_matrix = unwrap_kron(tomography_matrix,
     #                                 projection_tomography_matrix.projection_n_state1,
     #                                 projection_tomography_matrix.projection_n_state2)
 
-    tomography_matrix = tomography_matrix[0, :].\
-        reshape(projection_tomography_matrix.projection_n_state2, projection_tomography_matrix.projection_n_state2)
+    tomography_matrix = tomography_matrix.reshape(projection_tomography_matrix.projection_n_state2, projection_tomography_matrix.projection_n_state2)
 
     # Compute and plot reduced tomography_matrix
-    g1_ss_normalization = G1_Normalization(Signal.w)
-    g1_ii_normalization = G1_Normalization(Idler.w)
+    g1_ss_normalization = G1_Normalization(signal_w)
+    g1_ii_normalization = G1_Normalization(idler_w)
 
     tomography_matrix_reduced = tomography_matrix * \
                                 projection_tomography_matrix.tau / (g1_ii_normalization * g1_ss_normalization)

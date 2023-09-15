@@ -1,14 +1,15 @@
 from utils_class import *
-from utils_function import n_KTP_Kato
+from utils_function import n_KTP_Kato,c
 from defaults import *
 from corr_calc import corr_calc
+from draw_corr import save_results
 import pickle
 import numpy as onp 
 
 # get fields from spdc-pino-net
 
 
-datapath = "/home/dor-hay.sha/project/data/spdc/fixed_pump_N-100_seed-1701.bin"
+datapath = "/home/dor-hay.sha/project/data/spdc/fixed_pump_N-1000_seed-1701.bin"
 with open(file=datapath,mode="rb") as file:
     data = pickle.load(file)
 
@@ -24,7 +25,7 @@ params = params()
 
 projection_coincidence_rate = Projection_coincidence_rate(
         waist_pump0= params.waist_pump0,
-        signal_wavelength= (2 * params.lam_pump),
+        signal_wavelength= params.lam_signal,
         crystal_x=shape.x,
         crystal_y=shape.y,
         temperature = params.Temperature,
@@ -42,7 +43,7 @@ projection_coincidence_rate = Projection_coincidence_rate(
 
 projection_tomography_matrix = Projection_tomography_matrix(
         waist_pump0= params.waist_pump0,
-        signal_wavelength= (2 * params.lam_pump),
+        signal_wavelength= params.lam_signal,
         crystal_x=shape.x,
         crystal_y=shape.y,
         temperature = params.Temperature,
@@ -73,9 +74,19 @@ corr_calc = corr_calc(
             projection_tomography_matrix = projection_tomography_matrix,
             coincidence_rate_observable = True,
             density_matrix_observable = True,
-            tomography_matrix_observable = False,
+            tomography_matrix_observable = True,
             coupling_inefficiencies = False,
     
 )
 
-corr_calc.get_observables()
+observables = corr_calc.get_observables()
+
+save_results(
+        run_name = "test_run",
+        observable_vec = {COINCIDENCE_RATE: True, DENSITY_MATRIX: True, TOMOGRAPHY_MATRIX: True},
+        observables = observables,
+        projection_coincidence_rate = projection_coincidence_rate,
+        projection_tomography_matrix = projection_tomography_matrix,
+        signal_w = 2 * np.pi * c / (2 * params.lam_signal),
+        idler_w = 2 * np.pi * c / (2 * params.lam_idler)
+)
