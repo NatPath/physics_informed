@@ -26,7 +26,7 @@ model:
   grad: 'none'
 
 train:
-  batchsize: 2
+  batchsize: 4
   epochs: 500
   milestones: [150, 300, 450]
   base_lr: 0.001
@@ -36,10 +36,10 @@ train:
   xy_loss: 1.0
   crystal_z_weights: [0,1,1,1,1,1,1,1,1,1]
   save_dir: 'spdc-FDM'
-  save_name: 'spdc-pump-fixed_N-10_spp-10_ratio-inf_new_new_loss_fast_no_ic.pt'
+  save_name: 'spdc-pump-fixed_N-10_spp-10_ratio-inf_loss-div_norm_x*e6.pt'
 
 log:
   project: PINO-spdc-test
   group: ml4physics_spdc
   entity: ml4physics_spdc
-  tags: ["fixed_pump", "N-10", "spp-10", "ratio-inf", "new_loss"]
+  tags: ["fixed_pump", "N-10", "spp-10", "ratio-inf", "inf_loss-div_norm_x*e6","overfit"]

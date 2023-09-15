@@ -1,13 +1,13 @@
 data:
   name: spdc
-  datapath: '/home/dor-hay.sha/project/data/spdc/fixed_pump_10.bin'
+  datapath: '/home/dor-hay.sha/project/data/spdc/fixed_pump_N-10_seed-1701.bin'
   total_num: 10
   offset: 0
   n_sample: 8
   nx: 121
   ny: 121
   nz: 10
-  sub_xy: 2
+  sub_xy: 4
   sub_z: 1
   nin: 3
   nout: 2
@@ -25,8 +25,9 @@ model:
   num_pad: 5
 
 test:
-  batchsize: 1
-  ckpt: 'checkpoints/spdc-FDM/spdc-FNO-eqn_100.pt'
+  batchsize: 4
+  ckpt: 'checkpoints/spdc-FDM/spdc-pump-fixed_N-10_spp-10_ratio-inf_loss-div_norm_x_id-7pp72cyx.pt'
+  test_name: 'overfit'
 
 
 log:
