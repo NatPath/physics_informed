@@ -9,7 +9,7 @@ import numpy as onp
 # get fields from spdc-pino-net
 
 
-datapath = "/home/dor-hay.sha/project/data/spdc/fixed_pump_N-1000_seed-1701.bin"
+datapath = "/home/dor-hay.sha/project/data/spdc/fixed_pump_N-100_seed-1701.bin"
 with open(file=datapath,mode="rb") as file:
     data = pickle.load(file)
 
