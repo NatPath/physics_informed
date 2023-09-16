@@ -145,8 +145,11 @@ class SPDCLoader(object):
             self.data_dict = pickle.load(file)
         
         #make chi, a (X,Y,Z) tensor, to (N,X,Y,Z) - by repeating
-        chi_N_times=np.repeat(self.data_dict["chi"][np.newaxis,:],N,axis=0).reshape(N,1,nx,ny,nz)
-        data_tmp=torch.cat((chi_N_times,self.data_dict["fields"]),dim=1)
+        chi=np.array(self.data_dict["chi"])
+        chi_N_times=np.repeat(chi[np.newaxis,:],N,axis=0)
+        chi_N_times=chi_N_times.reshape(N,1,nx,ny,nz)
+        chi_N_times=torch.tensor(chi_N_times)
+        data_tmp=torch.cat((chi_N_times,torch.tensor(self.data_dict["fields"])),dim=1)
         #self.data = torch.tensor(self.data_dict["fields"], dtype=torch.complex128,requires_grad=True)[..., ::sub_xy, ::sub_xy, ::sub_z]
         self.data = torch.tensor(data_tmp, dtype=torch.complex128,requires_grad=True)[..., ::sub_xy, ::sub_xy, ::sub_z]
         self.data_dict["chi"] = torch.tensor(np.array(self.data_dict["chi"]), dtype=torch.complex128, requires_grad=True)[::sub_xy, ::sub_xy, ::sub_z]
