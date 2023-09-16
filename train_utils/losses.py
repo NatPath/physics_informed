@@ -662,13 +662,13 @@ def SPDC_loss(u,y,input,equation_dict, grad="autograd", crystal_z_weights = torc
     pde_loss = mse_loss(pde_res)/1e5/0.7578/5  
 
     # y_norm = torch.sum(mse_loss(y[...,-2:],reduction='none'), dim = (1,2))
-    x_norm = torch.sum(mse_loss(u,reduction='none'), dim = (1,2))
-    data_loss = torch.sum(mse_loss(u-y[...,-2:],reduction='none'), dim=(1,2)) / (x_norm + epsilon)
-    data_loss = torch.sum(data_loss, dim = (2,3)) # sum  real and im, signal and idler
+    x_norm = torch.sum(mse_loss(u,reduction='none'), dim = (1,2,4,5))
+    data_loss = torch.sum(mse_loss(u-y[...,-2:],reduction='none'), dim=(1,2,4,5)) / (x_norm + epsilon)
+    # data_loss = torch.sum(data_loss, dim = (2,3)) # sum  real and im, signal and idler
     data_loss = torch.mean(data_loss, dim = 0) # avarge on the batchsize
     
     crystal_z_weights = crystal_z_weights.to(data_loss.device)
-    data_loss_new = torch.sum(data_loss * crystal_z_weights) * 1e6
+    data_loss_new = torch.sum(data_loss * crystal_z_weights) * 1e8
     
     # data_loss_old = mse_loss(u_full-y_full[...,-2:])/mse_loss(y_full[...,-2:])
     # data_loss = data_loss_new + data_loss_old
