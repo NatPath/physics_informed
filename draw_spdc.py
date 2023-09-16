@@ -133,7 +133,7 @@ def plot_sol_with_phase(u,y,z=9,ckpt_name='default_ckpt.pt',results_dir='default
     cbar_ax2 = fig.add_axes([0.85, 0.15, 0.05, 0.35])
     fig.colorbar(im2, cax=cbar_ax2)
 
-    plt.savefig(f"{results_dir}/new_z={z}.jpg")
+    plt.savefig(f"{results_dir}/Intensity_phase_z={z}.jpg")
     plt.close('all')
 
 def plot_sol_with_real_imag(u,y,z=9,ckpt_name='default_ckpt.pt',results_dir='default_dir_name'):
@@ -199,7 +199,7 @@ def plot_sol_with_real_imag(u,y,z=9,ckpt_name='default_ckpt.pt',results_dir='def
     cbar_ax2 = fig.add_axes([0.85, 0.15, 0.05, 0.35])
     fig.colorbar(im2, cax=cbar_ax2)
 
-    plt.savefig(f"{results_dir}/new_z={z}.jpg")
+    plt.savefig(f"{results_dir}/real_imaginary_z={z}.jpg")
     plt.close('all')
 
 def plot_av_sol_old(u,y,ckpt_name):
