@@ -605,13 +605,13 @@ def coupled_wave_eq_PDE_Loss_fourier(u,input,k_arr, kappa_i, kappa_s):
 
 def SPDC_loss(u,y,input,equation_dict, grad="autograd", crystal_z_weights = torch.tensor(1,dtype = torch.float32)):
     '''
-    Calcultae and return the data loss, pde loss and ic (Initial condition) loss
+    Calculate and return the data loss, pde loss and ic (Initial condition) loss
     Args:
     u: The output of the network - tensor of shape (batch size, Nx, Ny, Nz, 2*nout) - where nout is the number of out fields (*2 because of both real and imag part). The fields order: (signal out, idler out)
     y: The entire ground truth solution - tensor of shape 
-        (batch size, Nx, Ny, Nz, 2*(nin+nout)) - where nout is the number of out fields (*2 because of both real and imag part). The fields order:      (pump,signal vac, idler vac, signal out, idler out)
-    input: The input to the network. a tensor of size (batchsize,X,Y,3+2*nin = 9)
-        The last index is the index (grid_x ,grid_y, grid_z, pump,signal vac, idler vac), each of the last 3 appears twice, once  real and once imag part
+        (batch size, Nx, Ny, Nz, 2*(nin+nout)) - where nout is the number of out fields (*2 because of both real and imag part). The fields order:      (chi ,pump,signal vac, idler vac, signal out, idler out)
+    input: The input to the network. a tensor of size (batchsize,X,Y,3+2*nin = 11)
+        The last index is the index (grid_x ,grid_y, grid_z, chi, pump, signal vac, idler vac), each of the last 3 appears twice, once  real and once imag part
     equation_dict: A dictionary containing
         "chi" -  np.ndarray of the shape (X,Y,Z) contain the chi2 
         "k_pump" -  scalar, the k pump coef
@@ -637,7 +637,7 @@ def SPDC_loss(u,y,input,equation_dict, grad="autograd", crystal_z_weights = torc
     ny = u.size(2)
     nz = u.size(3)
     u_nfields = u.size(4)//2 # should be 2
-    y_nfields = y.size(4)//2 # should be 5
+    y_nfields = y.size(4)//2 # should be 6
 
     u = u.reshape(batchsize,nx, ny, nz,2,u_nfields)
     y = y.reshape(batchsize,nx, ny, nz,2,y_nfields)

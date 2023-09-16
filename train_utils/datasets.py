@@ -116,7 +116,7 @@ class BurgersLoader(object):
         return loader
 
 class SPDCLoader(object):
-    def __init__(self, datapath, nx = 121, ny = 121, nz =10,nin=3,nout=2, sub_xy=1, sub_z=1,
+    def __init__(self, datapath, nx = 121, ny = 121, nz =10,nin=4,nout=2, sub_xy=1, sub_z=1,
                  N=10, device="cuda:0"):
         '''
         Load data from npy from a dictonary:
@@ -133,7 +133,7 @@ class SPDCLoader(object):
             nx: size of x axis
             ny: size of y axis
             nz: size of z axis
-            nin: number of input fields (pump, signal vac, idler vac)
+            nin: number of input fields (chi ,pump, signal vac, idler vac)
             nout: number of output fields (signal out, idler out)
             sub_xy: reduce the resoultion in xy plane
             sub_t: reduce the resoultion in z axis
@@ -143,7 +143,12 @@ class SPDCLoader(object):
         self.nout = nout
         with open(file=datapath,mode="rb") as file:
             self.data_dict = pickle.load(file)
-        self.data = torch.tensor(self.data_dict["fields"], dtype=torch.complex128,requires_grad=True)[..., ::sub_xy, ::sub_xy, ::sub_z]
+        
+        #make chi, a (X,Y,Z) tensor, to (N,X,Y,Z) - by repeating
+        chi_N_times=np.repeat(self.data_dict["chi"][np.newaxis,:],N,axis=0).reshape(N,1,nx,ny,nz)
+        data_tmp=torch.cat((chi_N_times,self.data_dict["fields"]),dim=1)
+        #self.data = torch.tensor(self.data_dict["fields"], dtype=torch.complex128,requires_grad=True)[..., ::sub_xy, ::sub_xy, ::sub_z]
+        self.data = torch.tensor(data_tmp, dtype=torch.complex128,requires_grad=True)[..., ::sub_xy, ::sub_xy, ::sub_z]
         self.data_dict["chi"] = torch.tensor(np.array(self.data_dict["chi"]), dtype=torch.complex128, requires_grad=True)[::sub_xy, ::sub_xy, ::sub_z]
         del self.data_dict["fields"]
         self.X = self.data.size(2)
