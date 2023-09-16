@@ -1,12 +1,12 @@
 from abc import ABC
 import jax.numpy as np
 
-from defaults import QUBIT
-from utils_class import DensMat
-from utils_function import *
+from correlation_utiles.defaults import QUBIT
+from correlation_utiles.utils_class import DensMat
+from correlation_utiles.utils_function import *
     
 
-class corr_calc(ABC):
+class Corr_calc(ABC):
 
 
     def __init__(

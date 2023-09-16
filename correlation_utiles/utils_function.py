@@ -2,7 +2,7 @@ import sys
 import jax.numpy as np
 from jax import lax
 from jax import jit
-from defaults import qubit_projection_n_state2, \
+from correlation_utiles.defaults import qubit_projection_n_state2, \
     qubit_tomography_dimensions, qutrit_projection_n_state2, qutrit_tomography_dimensions, QUBIT, QUTRIT
 import math
 from typing import List, Union, Any

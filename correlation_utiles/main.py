@@ -1,16 +1,16 @@
-from utils_class import *
-from utils_function import n_KTP_Kato,c
-from defaults import *
-from corr_calc import corr_calc
-from draw_corr import save_results
+from correlation_utiles.utils_class import *
+from correlation_utiles.utils_function import n_KTP_Kato,c
+from correlation_utiles.defaults import *
+from correlation_utiles.corr_calc import corr_calc
+from correlation_utiles.draw_corr_utils import save_results
 import pickle
 import numpy as onp 
 
 # get fields from spdc-pino-net
 
 calc_tomography = False
-# datapath = "/home/dor-hay.sha/project/data/spdc/fixed_pump_N-100_seed-1701.bin"
-datapath = '/home/dor-hay.sha/project/data/spdc/single_mode-(0,3)_N-100_seed-123.bin'
+datapath = "/home/dor-hay.sha/project/data/spdc/fixed_pump_N-100_seed-1701.bin"
+# datapath = '/home/dor-hay.sha/project/data/spdc/single_mode-(0,3)_N-100_seed-123.bin'
 with open(file=datapath,mode="rb") as file:
     data = pickle.load(file)
 
@@ -22,7 +22,7 @@ signal_k =  data["k_signal"].item()
 idler_k =  data["k_idler"].item() 
 
 shape = Shape()
-params = params()
+params = Params()
 
 projection_coincidence_rate = Projection_coincidence_rate(
         waist_pump0= params.waist_pump0,
@@ -64,7 +64,7 @@ projection_tomography_matrix = Projection_tomography_matrix(
 
 
 
-corr_calc = corr_calc(
+corr_calc = Corr_calc(
             idler_out = idler_out,
             idler_vac = idler_vac,
             signal_out = signal_out,

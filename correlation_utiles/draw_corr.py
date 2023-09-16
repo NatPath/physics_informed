@@ -1,199 +1,105 @@
-from defaults import COINCIDENCE_RATE, DENSITY_MATRIX, TOMOGRAPHY_MATRIX
-from utils_function import G1_Normalization
-from jax import numpy as np
+from correlation_utiles.utils_class import *
+from correlation_utiles.utils_function import n_KTP_Kato,c
+from correlation_utiles.defaults import *
+from correlation_utiles.corr_calc import Corr_calc
+from correlation_utiles.draw_corr_utils import save_results
+import pickle
+import numpy as onp 
 
-import os
-import shutil
-import numpy as onp
-import matplotlib.pyplot as plt
 
-RES_DIR = "tmp_fig"
+def draw_corr(
+        signal_out,
+        idler_out,
+        idler_vac, 
+        save_location = ".",
+        calc_tomography = False, 
+        coincidence_projection_max_mode1=1,
+        coincidence_projection_max_mode2=4
+        ):
+        """
+           print and save the coincidence corralation matrix, desity matrix and tomograph matrix.
+           Args:
+                signal_out - signal profile at the end of the crystal     
+                idler_out - idler profile at the end of the crystal     
+                idler_vac - idler vacum states profile at the end of the crystal  
+                save_location - location where the resultes will be saved   
+                calc_tomograph - bool, flag if to calc and print tomograph results
+                coincidence_projection_max_mode1 - Highest modes of the matrices that will be printed
+                coincidence_projection_max_mode2 - Highest modes of the matrices that will be printed
+        """
 
-def save_results(
-        run_name,
-        observable_vec,
-        observables,
-        projection_coincidence_rate,
-        projection_tomography_matrix,
-        signal_w,
-        idler_w,
-):
-    results_dir = os.path.join(RES_DIR, run_name)
-    if os.path.exists(results_dir):
-        shutil.rmtree(results_dir)
-    os.makedirs(results_dir, exist_ok=True)
+        shape = Shape()
+        params = Params()
 
-    (coincidence_rate, density_matrix, tomography_matrix) = observables
+        signal = Beam(lam=2*params.lam_pump, polarization=params.signal_polarization, T=params.Temperature, power=params.power_signal)
+        idler = Beam(lam=SFG_idler_wavelength(params.lam_pump,signal.lam), polarization=params.idler_polarization, T=params.Temperature, power=params.power_idler)
 
-    if observable_vec[COINCIDENCE_RATE]:
-        coincidence_rate = coincidence_rate[0]
-        coincidence_rate = coincidence_rate / np.sum(np.abs(coincidence_rate))
-        coincidence_rate_plots(
-            results_dir,
-            coincidence_rate,
-            projection_coincidence_rate,
-            signal_w,
-            idler_w,
+
+
+        projection_coincidence_rate = Projection_coincidence_rate(
+                waist_pump0= params.waist_pump0,
+                signal_wavelength= params.lam_signal,
+                crystal_x=shape.x,
+                crystal_y=shape.y,
+                temperature = params.Temperature,
+                ctype = n_KTP_Kato,
+                polarization = params.coincidence_projection_polarization,
+                z = params.coincidence_projection_z,
+                projection_basis = params.coincidence_projection_basis,
+                max_mode1 = coincidence_projection_max_mode1,
+                max_mode2 = coincidence_projection_max_mode2,
+                waist = params.coincidence_projection_waist,
+                wavelength = params.coincidence_projection_wavelength,
+                tau = params.tau,
+                SMF_waist = params.SMF_waist,
         )
 
-    if observable_vec[DENSITY_MATRIX]:
-        # density_matrix = density_matrix[0]
-        density_matrix = density_matrix / np.trace(np.real(density_matrix))
-        density_matrix_plots(
-            results_dir,
-            density_matrix,
+        projection_tomography_matrix = Projection_tomography_matrix(
+                waist_pump0= params.waist_pump0,
+                signal_wavelength= params.lam_signal,
+                crystal_x=shape.x,
+                crystal_y=shape.y,
+                temperature = params.Temperature,
+                ctype = n_KTP_Kato,
+                polarization = params.tomography_projection_polarization,
+                z = params.tomography_projection_z,
+                projection_basis = params.tomography_projection_basis,
+                max_mode1 = params.tomography_projection_max_mode1,
+                max_mode2 = params.tomography_projection_max_mode2,
+                waist = params.tomography_projection_waist,
+                wavelength = params.tomography_projection_wavelength,
+                tau = params.tau,
+                relative_phase = [0, onp.pi, 3 * (onp.pi / 2), onp.pi / 2],
+                tomography_quantum_state =  'qutrit',
+
         )
 
-    if observable_vec[TOMOGRAPHY_MATRIX]:
-        tomography_matrix = tomography_matrix[0]
-        tomography_matrix = tomography_matrix / np.sum(np.abs(tomography_matrix))
-        tomography_matrix_plots(
-            results_dir,
-            tomography_matrix,
-            projection_tomography_matrix,
-            signal_w,
-            idler_w,
+
+
+        corr_calc = Corr_calc(
+                idler_out = idler_out,
+                idler_vac = idler_vac,
+                signal_out = signal_out,
+                signal_k = signal.k,
+                idler_k = idler.k,
+                shape  = shape,
+                projection_coincidence_rate = projection_coincidence_rate,
+                projection_tomography_matrix = projection_tomography_matrix,
+                coincidence_rate_observable = True,
+                density_matrix_observable = True,
+                tomography_matrix_observable = calc_tomography,
+                coupling_inefficiencies = False,
+        
         )
 
+        observables = corr_calc.get_observables()
 
-def coincidence_rate_plots(
-        results_dir,
-        coincidence_rate,
-        projection_coincidence_rate,
-        signal_w,
-        idler_w,
-):
-    # coincidence_rate = unwrap_kron(coincidence_rate,
-    #                                projection_coincidence_rate.projection_n_modes1,
-    #                                projection_coincidence_rate.projection_n_modes2)
-    coincidence_rate = coincidence_rate.reshape(projection_coincidence_rate.projection_n_modes2, projection_coincidence_rate.projection_n_modes2)
-
-    # Compute and plot reduced coincidence_rate
-    g1_ss_normalization = G1_Normalization(signal_w)
-    g1_ii_normalization = G1_Normalization(idler_w)
-    coincidence_rate_reduced = coincidence_rate * \
-                               projection_coincidence_rate.tau / (g1_ii_normalization * g1_ss_normalization)
-
-
-    n = projection_coincidence_rate.max_mode2
-    loc = range(coincidence_rate.shape[0])
-    ticks = [str(t)  for t in range(-n,n+1)]
-    # plot coincidence_rate 2d
-    # plt.imshow(coincidence_rate_reduced) # actual number
-    plt.imshow(coincidence_rate) # probability
-    plt.xlabel(r'signal mode i')
-    plt.ylabel(r'idle mode j')
-    plt.xticks(loc,ticks)
-    plt.yticks(loc,ticks)
-    plt.colorbar()
-
-
-    plt.savefig(os.path.join(results_dir, 'coincidence_rate'))
-    plt.close()
-
-
-def tomography_matrix_plots(
-        results_dir,
-        tomography_matrix,
-        projection_tomography_matrix,
-        signal_w,
-        idler_w,
-):
-
-    # tomography_matrix = unwrap_kron(tomography_matrix,
-    #                                 projection_tomography_matrix.projection_n_state1,
-    #                                 projection_tomography_matrix.projection_n_state2)
-
-    tomography_matrix = tomography_matrix.reshape(projection_tomography_matrix.projection_n_state2, projection_tomography_matrix.projection_n_state2)
-
-    # Compute and plot reduced tomography_matrix
-    g1_ss_normalization = G1_Normalization(signal_w)
-    g1_ii_normalization = G1_Normalization(idler_w)
-
-    tomography_matrix_reduced = tomography_matrix * \
-                                projection_tomography_matrix.tau / (g1_ii_normalization * g1_ss_normalization)
-
-    n = projection_tomography_matrix.max_mode2
-    loc = range(tomography_matrix.shape[0])
-    ticks = [str(t)  for t in range(-n,n+1)]
-    # plot tomography_matrix 2d
-    plt.imshow(tomography_matrix_reduced)
-    plt.xlabel(r'signal mode i')
-    plt.ylabel(r'idle mode j')
-    plt.xticks(loc,ticks)
-    plt.yticks(loc,ticks)
-    plt.colorbar()
-
-    plt.savefig(os.path.join(results_dir, 'tomography_matrix'))
-    plt.close()
-
-
-def density_matrix_plots(
-        results_dir,
-        density_matrix,
-):
-
-    density_matrix_real = onp.real(density_matrix)
-    density_matrix_imag = onp.imag(density_matrix)
-
-    n = density_matrix.shape[0] // 2
-    loc = range(density_matrix.shape[0])
-    ticks = [str(t)  for t in range(-n,n+1)]
-
-    plt.imshow(density_matrix_real)
-    plt.xlabel(r'signal mode i')
-    plt.ylabel(r'idle mode j')
-    plt.xticks(loc,ticks)
-    plt.yticks(loc,ticks)
-    plt.colorbar()
-    plt.savefig(os.path.join(results_dir, 'density_matrix_real'))
-    plt.close()
-
-    plt.imshow(density_matrix_imag)
-    plt.xlabel(r'signal mode i')
-    plt.ylabel(r'idle mode j')
-    plt.xticks(loc,ticks)
-    plt.yticks(loc,ticks)
-    plt.colorbar()
-    plt.savefig(os.path.join(results_dir, 'density_matrix_imag'))
-    plt.close()
-
-
-def type_coeffs_to_txt(
-        basis,
-        max_mode1,
-        max_mode2,
-        coeffs_real,
-        coeffs_imag,
-        waists):
-    sign = {'1.0': '+', '-1.0': '-', '0.0': '+'}
-    print_str = f'basis: {basis}({max_mode1},{max_mode2}):\n'
-    for _real, _imag, _waist in zip(coeffs_real, coeffs_imag, waists):
-        sign_imag = sign[str(onp.sign(_imag).item())]
-        print_str += '{:.4} {} j{:.4} (waist: {:.4}[um])\n'.format(_real, sign_imag, onp.abs(_imag), _waist * 10)
-    return print_str
-
-
-def unwrap_kron(G, M1, M2):
-    '''
-    the function takes a Kronicker product of size M1^2 x M2^2 and turns is into an
-    M1 x M2 x M1 x M2 tensor. It is used only for illustration and not during the learning
-    Parameters
-    ----------
-    G: the tensor we wish to reshape
-    M1: first dimension
-    M2: second dimension
-
-    Returns a reshaped tensor with shape (M1, M2, M1, M2)
-    -------
-
-    '''
-
-    C = onp.zeros((M1, M2, M1, M2), dtype=onp.float32)
-
-    for i in range(M1):
-        for j in range(M2):
-            for k in range(M1):
-                for l in range(M2):
-                    C[i, j, k, l] = G[k + M1 * i, l + M2 * j]
-    return C
+        save_results(
+                run_name = save_location,
+                observable_vec = {COINCIDENCE_RATE: True, DENSITY_MATRIX: True, TOMOGRAPHY_MATRIX: calc_tomography},
+                observables = observables,
+                projection_coincidence_rate = projection_coincidence_rate,
+                projection_tomography_matrix = projection_tomography_matrix,
+                signal_w = signal.w,
+                idler_w = idler.w
+        )

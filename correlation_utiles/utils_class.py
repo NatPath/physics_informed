@@ -6,9 +6,9 @@ from jax import jit
 from jax.numpy import index_exp
 from typing import List, Union, Any
 import math
-from defaults import qubit_projection_n_state2, \
+from correlation_utiles.defaults import qubit_projection_n_state2, \
     qubit_tomography_dimensions, qutrit_projection_n_state2, qutrit_tomography_dimensions, QUBIT, QUTRIT
-from utils_function import LaguerreBank, TomographyBankLG
+from correlation_utiles.utils_function import LaguerreBank, TomographyBankLG, c, n_KTP_Kato
 
 class DensMat(ABC):
     """

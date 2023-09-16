@@ -12,7 +12,7 @@ qutrit_tomography_dimensions = 3
 
 SFG_idler_wavelength    = lambda lambda_p, lambda_s: lambda_p * lambda_s / (lambda_s - lambda_p)
 
-class params():
+class Params():
         def __init__(
             self,
             coupling_inefficiencies: bool = False,
