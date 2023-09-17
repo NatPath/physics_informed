@@ -14,6 +14,7 @@ from matplotlib import cm
 import os
 import draw_utils 
 import wandb
+from correlation_utiles.draw_corr import draw_corr
 
 
 def draw_spdc_from_train(config,save_name,model,first_pump_dl,device,id,train_or_validate):
@@ -257,6 +258,28 @@ def plot_singel_sol(u,y,j,ckpt_name):
             plt.title(f"{dict[i]}-{src}")
             plt.savefig(f"tmp_fig/{ckpt_name}-{dict[i]}-{src}-imag.jpg")
 
+def plot_corr(u,y,ckpt_name, results_dir):
+    N,nx,ny,nz,u_nfields = u.shape
+    y_nfields = y.shape[4]
+    u = u.reshape(N,nx, ny, nz,2,u_nfields//2)
+    y = y.reshape(N,nx, ny, nz,2,y_nfields//2)
+    u = (u[...,0,:] + 1j*u[...,1,:]).detach().numpy()
+    y = (y[...,0,:] + 1j*y[...,1,:]).detach().numpy()
+
+    draw_corr(
+        signal_out= u[:,:,:,-1,-2],
+        idler_out= u[:,:,:,-1,-1],
+        idler_vac= y[:,:,:,-1,-3],
+        save_location = str(f"{results_dir}/{ckpt_name[:-3]}/pred")
+    )
+    draw_corr(
+        signal_out= y[:,:,:,-1,-2],
+        idler_out= y[:,:,:,-1,-1],
+        idler_vac= y[:,:,:,-1,-3],
+        save_location = str(f"{results_dir}/{ckpt_name[:-3]}/grt")
+    )
+
+
 def draw_SPDC(model,
                  dataloader,
                  config,
@@ -294,6 +317,9 @@ def draw_SPDC(model,
     results_dir=os.path.join(script_dir,results_dir_name)
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
+    
+    plot_corr(u = total_out,y = total_y, ckpt_name = ckpt_name,results_dir = results_dir)
+
     for z in range(config['data']['nz']):
         plot_sol_with_phase(total_out,total_y,z,ckpt_name,results_dir)
         plot_av_sol(total_out,total_y,z,ckpt_name,results_dir,emd)

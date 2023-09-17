@@ -48,7 +48,7 @@ def train_SPDC(model,
             else:
                 id=wandb.util.generate_id()
             run = wandb.init(id=id,
-                            name=config['train']['save_name'][:-3]+f'_id_{id}',
+                            name=config['train']['save_name'][:-3]+f'_id-{id}',
                             project=project,
                             entity=config['log']['entity'],
                             group=group,
@@ -69,7 +69,7 @@ def train_SPDC(model,
             crystal_z_weights = config['train']['crystal_z_weights']
             crystal_z_weights = torch.tensor(crystal_z_weights,dtype = torch.float32)
         else:
-            crystal_z_weights = torch.tensor([0]+[1]*config['data']['nz'],dtype = torch.float3)
+            crystal_z_weights = torch.tensor([0]+[1]*(config['data']['nz']-1),dtype = torch.float32)
         crystal_z_weights = crystal_z_weights / torch.sum(crystal_z_weights) # normalize to 1
         #normalize weights to sum to 1
         sum_weights=data_weight+f_weight+ic_weight
@@ -224,8 +224,8 @@ def train_SPDC(model,
                         model, optimizer,scheduler,
                         epoch=e, best_val_yet=min_valid_loss)
         if (wandb and log) and draw: 
-            draw_spdc.draw_spdc_from_train(config,tmp_save_name,model,train_first_pump_dl,device,id,train_or_validate='val')
-            draw_spdc.draw_spdc_from_train(config,tmp_save_name,model, val_first_pump_dl,device,id,train_or_validate='train')
+            draw_spdc.draw_spdc_from_train(config,tmp_save_name,model,train_first_pump_dl,device,id,train_or_validate='train')
+            draw_spdc.draw_spdc_from_train(config,tmp_save_name,model, val_first_pump_dl,device,id,train_or_validate='val')
 
     print('Done!')
 
@@ -487,7 +487,7 @@ def test(config):
         crystal_z_weights = config['train']['crystal_z_weights']
         crystal_z_weights = torch.tensor(crystal_z_weights,dtype = torch.float32)
     else:
-        crystal_z_weights = torch.tensor([0]+[1]*config['data']['nz'],dtype = torch.float3)
+        crystal_z_weights = torch.tensor([0]+[1]*(config['data']['nz']-1),dtype = torch.float32)
     crystal_z_weights = crystal_z_weights / torch.sum(crystal_z_weights) # normalize to 1
 
     eval_SPDC(model=model,dataloader=dataloader, config=config, equation_dict=equation_dict, device=device, crystal_z_weights=crystal_z_weights)
