@@ -14,7 +14,7 @@ data:
   nout: 2
 
 model:
-  layers: [64, 64, 64, 64, 64]
+  layers: [64, 64, 64, 64, 64, 64, 64, 64]
   modes1: [8, 8, 8, 8]
   modes2: [8, 8, 8, 8]
   modes3: [8, 8, 8, 8]
@@ -36,10 +36,10 @@ train:
   xy_loss: 1.0
   crystal_z_weights: [0,1,1,1,1,1,1,1,1,1]
   save_dir: 'spdc-FDM'
-  save_name: 'spdc-pump-fixed_N-9_cyrstal-(0,3)_ratio-inf.pt'
+  save_name: 'spdc-pump-fixed_N-9_cyrstal-(0,3)_ratio-inf_lay-8*.pt'
 
 log:
   project: PINO-spdc-test
   group: ml4physics_spdc
   entity: ml4physics_spdc
-  tags: ["fixed_pump", "N-9","ratio-inf","overfit"]
+  tags: ["fixed_pump", "N-9","ratio-inf","overfit", "layers-8*"]
