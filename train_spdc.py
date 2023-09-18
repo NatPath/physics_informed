@@ -487,7 +487,7 @@ def test(config):
         crystal_z_weights = config['train']['crystal_z_weights']
         crystal_z_weights = torch.tensor(crystal_z_weights,dtype = torch.float32)
     else:
-        crystal_z_weights = torch.tensor([0]+[1]*config['data']['nz']-1,dtype = torch.float3)
+        crystal_z_weights = torch.tensor([0]+[1]*(config['data']['nz']-1),dtype = torch.float32)
     crystal_z_weights = crystal_z_weights / torch.sum(crystal_z_weights) # normalize to 1
 
     eval_SPDC(model=model,dataloader=dataloader, config=config, equation_dict=equation_dict, device=device, crystal_z_weights=crystal_z_weights)

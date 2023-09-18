@@ -14,7 +14,7 @@ data:
 
 
 model:
-  layers: [64, 64, 64, 64, 64]
+  layers: [64, 64, 64, 64, 64, 64, 64, 64]
   modes1: [8, 8, 8, 8]
   modes2: [8, 8, 8, 8]
   modes3: [8, 8, 8, 8]
@@ -23,10 +23,11 @@ model:
   out_dim: 4
   act: gelu
   num_pad: 5
+  grad: 'none'
 
 test:
-  batchsize: 4
-  ckpt: 'checkpoints/spdc-FDM/spdc-pump-fixed_N-10_spp-10_ratio-inf_loss-div_norm_x_id-7pp72cyx.pt'
+  batchsize: 1
+  ckpt: 'checkpoints/spdc-FDM/spdc-pump-fixed_N-10_spp-10_ratio-inf_overfit_id-khr8sutu.pt'
   test_name: 'overfit'
 
 
@@ -34,4 +35,3 @@ log:
   project: PINO-spdc-test
   group: gelu-eqn
   entity: hzzheng-pino
-
