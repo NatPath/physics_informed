@@ -42,3 +42,4 @@ configs/ngc/SPDC-pino-tmp_sub2.yaml
 configs/test/SPDC-test-tmp_crystal.yaml
 configs/ngc/SPDC-pino-tmp.yaml
 configs/test/SPDC-test-overfit.yaml
+slurm_script/pino-tmp_slow.sh

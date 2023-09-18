@@ -1,9 +1,9 @@
 data:
   name: spdc
-  datapath: '/home/dor-hay.sha/project/data/spdc/fixed_pump_N-10_seed-1701.bin'
-  total_num: 10
+  datapath: '/home/dor-hay.sha/project/data/spdc/fixed_pump_N-9_crystal_seed-1701.bin'
+  total_num: 9
   offset: 0
-  n_sample: 8
+  n_sample: 7
   spp: 2
   nx: 121
   ny: 121
@@ -36,10 +36,10 @@ train:
   xy_loss: 1.0
   crystal_z_weights: [0,1,1,1,1,1,1,1,1,1]
   save_dir: 'spdc-FDM'
-  save_name: 'spdc-pump-fixed_N-10_spp-10_ratio-inf_loss-div_norm_x*e6.pt'
+  save_name: 'spdc-pump-fixed_N-9_cyrstal-(0,3)_ratio-inf.pt'
 
 log:
   project: PINO-spdc-test
   group: ml4physics_spdc
   entity: ml4physics_spdc
-  tags: ["fixed_pump", "N-10", "spp-10", "ratio-inf", "inf_loss-div_norm_x*e6","overfit"]
+  tags: ["fixed_pump", "N-9","ratio-inf","overfit"]
