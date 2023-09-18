@@ -69,7 +69,7 @@ def train_SPDC(model,
             crystal_z_weights = config['train']['crystal_z_weights']
             crystal_z_weights = torch.tensor(crystal_z_weights,dtype = torch.float32)
         else:
-            crystal_z_weights = torch.tensor([0]+[1]*(config['data']['nz']-1),dtype = torch.float32)
+            crystal_z_weights = torch.tensor([0]+[1]*config['data']['nz']-1,dtype = torch.float32)
         crystal_z_weights = crystal_z_weights / torch.sum(crystal_z_weights) # normalize to 1
         #normalize weights to sum to 1
         sum_weights=data_weight+f_weight+ic_weight
@@ -126,7 +126,7 @@ def train_SPDC(model,
                 # out = out[...,:-padding,:, :] # if padding is not 0
                 with record_function("LOSS CALCULATION"):
                     data_loss,ic_loss,f_loss = SPDC_loss(u=out,y=y,input=x,equation_dict=equation_dict, grad=grad, crystal_z_weights= crystal_z_weights)
-                    total_loss = ic_loss * ic_weight + f_loss * f_weight + data_loss * data_weight
+                    total_loss = (ic_loss * ic_weight + f_loss * f_weight + data_loss * data_weight) * 1e8
 
                 gc.collect()
                 torch.cuda.empty_cache()
@@ -137,7 +137,7 @@ def train_SPDC(model,
 
                 data_l2 += data_loss.item()
                 train_pino += f_loss.item() 
-                train_loss += total_loss.item()
+                train_loss += (total_loss.item() / 1e8)
             scheduler.step()
             data_l2 /= len(train_loader)
             train_pino /= len(train_loader)
