@@ -47,6 +47,7 @@ def train_SPDC(model,
                 id=config['train']['id']
             else:
                 id=wandb.util.generate_id()
+            os.environ["WANDB__SERVICE_WAIT"] = "300"
             run = wandb.init(id=id,
                             name=config['train']['save_name'][:-3]+f'_id-{id}',
                             project=project,
