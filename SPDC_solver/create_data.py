@@ -152,6 +152,42 @@ def random_pump(N_samples, config ,spp = 1, max_mode = 5, seed = 1701, loc = Non
     save_data(data,file_name)
 
 
+def uniform_pump(N_samples, config ,spp = 1, max_mode = 5, seed = 1701, loc = None,crystal_coef={"max_mode1": 1, "max_mode2":0, "real_coef":np.array([1]),"img_coef":np.array([0])},is_crystal=False):
+
+    if not (N_samples == (N_samples // spp) * spp):
+        raise Exception("Error! (N /spp) is not a round number")
+
+    default_loc = "/home/dor-hay.sha/project/data/spdc"
+    if loc is not None:
+        file_name = str(f"{loc}/uniform_pump_N-{N_samples}_seed-{seed}_spp-{spp}.bin")
+    else:
+        file_name = str(f"{default_loc}/uniform_pump_N-{N_samples}_seed-{seed}_spp-{spp}.bin")
+    
+    print(f"creating data: {(N_samples // spp)} uniform pump modes with max_mode = {max_mode} and seed = {seed}")
+
+    np.random.seed(seed)
+    rng = np.random.default_rng()
+
+    p = list(range(max_mode))
+    l = list(range(-max_mode,max_mode+1))
+
+    for n in tqdm(range(N_samples//spp)):
+        coeffs_arr = rng.uniform(low=0.0, high=1.0, size=len(l)*len(p)) # in (0, 1]
+        coeffs_arr = coeffs_arr * np.exp(1j*rng.uniform(low=0.0, high=2*np.pi, size=len(coeffs_arr)))
+        pump_coef = {"max_mode1": max_mode, "max_mode2":max_mode, "real_coef":coeffs_arr.real,"img_coef":coeffs_arr.imag}
+
+        A = SPDC_solver(N=spp,config=config,crystal_coef=crystal_coef,is_crystal=is_crystal,pump_coef=pump_coef,data_creation=True, seed = (seed + n))
+        A.solve()
+        if n==0:
+            fields = A.data["fields"]
+        else: 
+            fields = np.append(fields,A.data["fields"],axis=0)
+    data = A.data
+    data["fields"] = fields
+
+    save_data(data,file_name)
+
+
 
 
 
@@ -160,14 +196,14 @@ if __name__ == '__main__':
     parser.add_argument('-N', type=int, default=10, help='Number of samples that will be created (default N=10)')
     parser.add_argument('--seed', type=int, default=1701, help='Seed for the random pump profile and the vacum states (default seed = 1701)')
     parser.add_argument('--loc', type=str, help='Location to save the file, if not specifed save at a deafult location')
-    parser.add_argument('--mode', type=str, default="fixed", help='Pick mode of data creation from the following:\nfixed - create pure fixed LG modes for pump.\nsingle - create pure fixed single LG modes for pump according to given p,l.\nrandom - create mixed random pump modes.')
+    parser.add_argument('--mode', type=str, default="fixed", help='Pick mode of data creation from the following:\nfixed - create pure fixed LG modes for pump.\nsingle - create pure fixed single LG modes for pump according to given p,l.\nrandom - create mixed random pump modes.\nuniform - create a combination of all modes up to max mode with uniformly distribuited range [0,1] and phase')
     parser.add_argument('--spp', type=int,help='Number of samples that will be created for each pump')
     parser.add_argument('-p', type=int, default=0, help = 'p number if creation mode is \'single\' (default p = 0)')
     parser.add_argument('-l', type=int, default=0, help = 'l number if creation mode is \'single\' (default l = 0)')
     parser.add_argument('--crystal', action='store_true',default=False, help = 'Specify to create a custome crystal')
 
     args = parser.parse_args()
-    config = Config(pump_waist=80e-6)
+    config = Config(pump_waist=80e-6) # 40e-6, 60e-6, 100e-6, 120e-6
 
     if args.crystal==True:
         
@@ -194,6 +230,9 @@ if __name__ == '__main__':
 
     elif args.mode == 'random':
         random_pump(N_samples=args.N ,crystal_coef=crystal_coef,is_crystal=is_crystal, config=config, spp=args.spp, seed=args.seed, loc=args.loc)
+
+    elif args.mode == 'uniform':
+        uniform_pump(N_samples=args.N ,crystal_coef=crystal_coef,is_crystal=is_crystal, config=config, spp=args.spp, seed=args.seed, loc=args.loc)
     
     else:
         raise Exception(f"Error! \'{args.mode}\' is not a valid creation mode'")
