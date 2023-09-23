@@ -59,7 +59,8 @@ def plot_av_sol(u,y,z=9,ckpt_name='default_ckpt.pt',results_dir='default_dir_nam
             if sum_pic == 0:
                 pics.append(pic)
             else:
-                pics.append(pic/sum_pic)
+                # pics.append(pic/sum_pic)
+                pics.append(pic)
             surf = ax.plot_surface(X, Y, pic, cmap=cm.coolwarm,linewidth=0, antialiased=False)
             fig.colorbar(surf, shrink=0.5, aspect=5)
             plt.title(f"{dict[i]}-{src}")
@@ -318,10 +319,11 @@ def draw_SPDC(model,
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
     
-    plot_corr(u = total_out,y = total_y, ckpt_name = ckpt_name,results_dir = results_dir)
+    if __name__ == '__main__':
+        plot_corr(u = total_out,y = total_y, ckpt_name = ckpt_name,results_dir = results_dir)
 
     for z in range(config['data']['nz']):
-        plot_sol_with_phase(total_out,total_y,z,ckpt_name,results_dir)
+        # plot_sol_with_phase(total_out,total_y,z,ckpt_name,results_dir)
         plot_av_sol(total_out,total_y,z,ckpt_name,results_dir,emd)
         plot_sol_with_real_imag(total_out,total_y,z,ckpt_name,results_dir)
 

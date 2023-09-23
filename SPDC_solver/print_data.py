@@ -6,11 +6,11 @@ import plotly.express as px
 import plotly
 import pickle
 
-datapath = "/home/dor-hay.sha/project/data/spdc/fixed_pump_N-500_seed-1701.bin"
+datapath = "/home/dor-hay.sha/project/data/spdc/uniform_pump_N-5_seed-1701_spp-1.bin"
 # datapath = "./random_pump_N-12_spp-4.bin"
 N = 0
-spp = 500
-z0 = 0
+spp = 1
+z0 = 9
 
 with open(file=datapath,mode="rb") as file:
     data = pickle.load(file)
@@ -20,7 +20,7 @@ shape = Shape()
 
 X,Y = np.meshgrid(shape.x,shape.y, indexing='ij')
 for z in range(z0,10):
-    for i in range(5):
+    for i in range(1):
          if "vac" not in dict[i]:
             if True:
                      fig, (ax1,ax2) = plt.subplots(1,2)
