@@ -630,7 +630,7 @@ def SPDC_loss(u,y,input,equation_dict, grad="autograd", crystal_z_weights = torc
     '''
 
     mse_loss = lambda x,reduction='mean': F.mse_loss(torch.abs(x),torch.zeros(x.shape,device=x.device,dtype=input.dtype),reduction=reduction)
-    epsilon = 1e-8
+    epsilon = 1e-6
 
     batchsize = u.size(0)
     nx = u.size(1)
@@ -656,9 +656,11 @@ def SPDC_loss(u,y,input,equation_dict, grad="autograd", crystal_z_weights = torc
     # y_full = y[...,0,:] + 1j*y[...,1,:] # real part + j * imag part
     
 
-    u0 = u[..., 0,:]
-    y0 = y[..., 0,:]
-    ic_loss = mse_loss(u0-y0[...,-2:])
+    u0 = u[:,:,:,0,:,:]
+    y0 = y[:,:,:,0,:,:]
+    ic_loss = torch.sum(mse_loss(u0-y0[...,-2:],reduction='none'), dim=(1,2,3,4))
+    ic_loss = torch.mean(ic_loss)
+    
     pde_loss = mse_loss(pde_res)/1e5/0.7578/5  
 
     # y_norm = torch.sum(mse_loss(y[...,-2:],reduction='none'), dim = (1,2))
