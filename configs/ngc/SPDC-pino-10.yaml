@@ -1,9 +1,9 @@
 data:
   name: spdc
-  datapath: '/home/dor-hay.sha/project/data/spdc/fixed_pump_N-9_crystal_seed-1701.bin'
-  total_num: 9
+  datapath: '/home/dor-hay.sha/project/data/spdc/fixed_pump_N-10_seed-1701.bin'
+  total_num: 10
   offset: 0
-  n_sample: 7
+  n_sample: 8
   spp: 2
   nx: 121
   ny: 121
@@ -14,7 +14,7 @@ data:
   nout: 2
 
 model:
-  layers: [64, 64, 64, 64, 64, 64, 64, 64]
+  layers: [64, 64, 64, 64, 64]
   modes1: [8, 8, 8, 8]
   modes2: [8, 8, 8, 8]
   modes3: [8, 8, 8, 8]
@@ -26,20 +26,20 @@ model:
   grad: 'none'
 
 train:
-  batchsize: 4
+  batchsize: 15
   epochs: 500
   milestones: [150, 300, 450]
-  base_lr: 0.001
+  base_lr: 0.1
   scheduler_gamma: 0.5
-  ic_loss: 0.0
+  ic_loss: 100.0
   f_loss: 0.0
   xy_loss: 1.0
   crystal_z_weights: [0,1,1,1,1,1,1,1,1,1]
   save_dir: 'spdc-FDM'
-  save_name: 'spdc-pump-fixed_N-9_cyrstal-(0,3)_ratio-inf_lay-8*.pt'
+  save_name: 'spdc-pump-fixed_N-10_IC.pt'
 
 log:
   project: PINO-spdc-test
   group: ml4physics_spdc
   entity: ml4physics_spdc
-  tags: ["fixed_pump", "N-9","ratio-inf","overfit", "layers-8*"]
+  tags: ["fixed_pump", "N-10","ratio-inf","overfit", "IC-100","lr-1e-3"]
