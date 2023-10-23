@@ -6,7 +6,7 @@ import plotly.express as px
 import plotly
 import pickle
 
-datapath = "/home/dor-hay.sha/project/data/spdc/uniform_pump_N-5_seed-1701_spp-1.bin"
+datapath = "/home/dor-hay.sha/project/data/spdc/uniform_pump_N-500_seed-1701_spp-10.bin"
 # datapath = "./random_pump_N-12_spp-4.bin"
 N = 0
 spp = 1

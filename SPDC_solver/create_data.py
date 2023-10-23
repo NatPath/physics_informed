@@ -152,7 +152,7 @@ def random_pump(N_samples, config ,spp = 1, max_mode = 5, seed = 1701, loc = Non
     save_data(data,file_name)
 
 
-def uniform_pump(N_samples, config ,spp = 1, max_mode = 5, seed = 1701, loc = None,crystal_coef={"max_mode1": 1, "max_mode2":0, "real_coef":np.array([1]),"img_coef":np.array([0])},is_crystal=False):
+def uniform_pump(N_samples, config ,spp = 1, max_mode = 10, seed = 1701, loc = None,crystal_coef={"max_mode1": 1, "max_mode2":0, "real_coef":np.array([1]),"img_coef":np.array([0])},is_crystal=False):
 
     if not (N_samples == (N_samples // spp) * spp):
         raise Exception("Error! (N /spp) is not a round number")

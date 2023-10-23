@@ -630,7 +630,7 @@ def SPDC_loss(u,y,input,equation_dict, grad="autograd", crystal_z_weights = torc
     '''
 
     mse_loss = lambda x,reduction='mean': F.mse_loss(torch.abs(x),torch.zeros(x.shape,device=x.device,dtype=input.dtype),reduction=reduction)
-    epsilon = 1e-6
+    epsilon = 1e-8
 
     batchsize = u.size(0)
     nx = u.size(1)
