@@ -14,7 +14,7 @@ from matplotlib import cm
 import os
 import draw_utils 
 import wandb
-from correlation_utiles.draw_corr import draw_corr
+from correlation_utiles.draw_corr import draw_corr, get_observables,draw_observables
 
 
 def draw_spdc_from_train(config,save_name,model,first_pump_dl,device,id,train_or_validate):
@@ -260,6 +260,10 @@ def plot_singel_sol(u,y,j,ckpt_name):
             plt.savefig(f"tmp_fig/{ckpt_name}-{dict[i]}-{src}-imag.jpg")
 
 def plot_corr(u,y,ckpt_name, results_dir):
+    results_dir=results_dir+f'/{ckpt_name[:-3]}'
+    if not os.path.isdir(results_dir):
+        os.makedirs(results_dir)
+
     N,nx,ny,nz,u_nfields = u.shape
     y_nfields = y.shape[4]
     u = u.reshape(N,nx, ny, nz,2,u_nfields//2)
@@ -267,18 +271,24 @@ def plot_corr(u,y,ckpt_name, results_dir):
     u = (u[...,0,:] + 1j*u[...,1,:]).detach().numpy()
     y = (y[...,0,:] + 1j*y[...,1,:]).detach().numpy()
 
-    draw_corr(
+    obs =[[],[]]
+    # coincidence_rate, density_matrix, tomography_matrix
+    # pred
+    obs[0] += list(get_observables(
         signal_out= u[:,:,:,-1,-2],
         idler_out= u[:,:,:,-1,-1],
-        idler_vac= y[:,:,:,-1,-3],
-        save_location = str(f"{results_dir}/{ckpt_name[:-3]}/pred")
-    )
-    draw_corr(
+        idler_vac= y[:,:,:,-1,-3]
+    ))
+
+    obs[1] += list(get_observables(
         signal_out= y[:,:,:,-1,-2],
         idler_out= y[:,:,:,-1,-1],
-        idler_vac= y[:,:,:,-1,-3],
-        save_location = str(f"{results_dir}/{ckpt_name[:-3]}/grt")
-    )
+        idler_vac= y[:,:,:,-1,-3]
+    ))
+    draw_observables(
+        observables=obs,
+        save_location=str(f"{results_dir}/observables.jpg"))
+
 
 
 def draw_SPDC(model,
@@ -322,10 +332,10 @@ def draw_SPDC(model,
     if __name__ == '__main__':
         plot_corr(u = total_out,y = total_y, ckpt_name = ckpt_name,results_dir = results_dir)
 
-    for z in range(config['data']['nz']):
-        # plot_sol_with_phase(total_out,total_y,z,ckpt_name,results_dir)
-        plot_av_sol(total_out,total_y,z,ckpt_name,results_dir,emd)
-        plot_sol_with_real_imag(total_out,total_y,z,ckpt_name,results_dir)
+    # for z in range(config['data']['nz']):
+    #     # plot_sol_with_phase(total_out,total_y,z,ckpt_name,results_dir)
+    #     plot_av_sol(total_out,total_y,z,ckpt_name,results_dir,emd)
+    #     plot_sol_with_real_imag(total_out,total_y,z,ckpt_name,results_dir)
 
 
 
