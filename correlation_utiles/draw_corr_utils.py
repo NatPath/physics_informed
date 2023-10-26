@@ -198,3 +198,13 @@ def unwrap_kron(G, M1, M2):
                 for l in range(M2):
                     C[i, j, k, l] = G[k + M1 * i, l + M2 * j]
     return C
+
+
+def trace_distace(m1,m2):
+    x = m1 - m2
+    eig = np.linalg.eigh(np.matmul(x.conj().T,x))[0]
+    D = 1/2 * np.sum(np.sqrt(np.abs(eig)))
+    return D
+
+def total_variation_distance(m1,m2):
+    return 1/2 * np.sum(np.abs(m1-m2))

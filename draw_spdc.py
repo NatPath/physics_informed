@@ -287,7 +287,8 @@ def plot_corr(u,y,ckpt_name, results_dir):
     ))
     draw_observables(
         observables=obs,
-        save_location=str(f"{results_dir}/observables.jpg"))
+        save_location=str(results_dir)
+    )
 
 
 

@@ -2,7 +2,7 @@ from correlation_utiles.utils_class import *
 from correlation_utiles.utils_function import n_KTP_Kato,c
 from correlation_utiles.defaults import *
 from correlation_utiles.corr_calc import Corr_calc
-from correlation_utiles.draw_corr_utils import save_results
+from correlation_utiles.draw_corr_utils import save_results, trace_distace, total_variation_distance
 import pickle
 import numpy as onp 
 import matplotlib.pyplot as plt
@@ -98,18 +98,24 @@ def draw_observables(
                 max_mode2 = 4
                 ):
         '''
-                observables - array of dim (2,6), where the first index indicate if the observable is prediction (0) or ground truth (1) and the second is which observable according to the order coincidence_rate, density_matrix, tomography_matrix
-                save_location - location where the resultes will be saved   
+        observables - array of dim (2,3), where the first index indicate if the observable is prediction (0) or ground truth (1) and the second is which observable according to the order coincidence_rate, density_matrix, tomography_matrix
+        save_location - location where the resultes will be saved   
         '''
         fig, ax = plt.subplots(3,2,dpi=200,figsize=[10,10])
+        src = ["Prediction", "Ground truth"]
 
-        for i in range(2):
+        # plotting 
+        for i in [1,0]:
                 # plotting correlation
                 plt.subplot(3,2,i+1)
-                coincidence_rate = observables[i][0].reshape(2*max_mode2+1, 2*max_mode2+1)
+                ax[0][i].set_title(src[i])
+                coincidence_rate = observables[i][0][0]
+                coincidence_rate = coincidence_rate / np.sum(np.abs(coincidence_rate))
+                coincidence_rate = coincidence_rate.reshape(2*max_mode2+1, 2*max_mode2+1)
+                observables[i][0] = coincidence_rate
                 loc = range(coincidence_rate.shape[0])
                 ticks = [str(t)  for t in range(-max_mode2,max_mode2+1)]
-                im = plt.imshow(coincidence_rate) # probability
+                im = plt.imshow(coincidence_rate,vmin=0,vmax=np.max(observables[1][0])) # probability
                 plt.xlabel(r'signal mode i')
                 plt.ylabel(r'idle mode j')
                 plt.xticks(loc,ticks)
@@ -119,6 +125,9 @@ def draw_observables(
                 # plotting density matrix
                 plt.subplot(3,2,i+3)
                 density_matrix = observables[i][1]
+                # density_matrix = density_matrix / np.trace(np.real(density_matrix)) # why only real?
+                density_matrix = density_matrix / np.trace(density_matrix) # Might shoud be real
+                observables[i][1] = density_matrix
                 density_matrix_real = onp.real(density_matrix)
                 density_matrix_imag = onp.imag(density_matrix)
 
@@ -126,7 +135,8 @@ def draw_observables(
                 loc = range(density_matrix.shape[0])
                 ticks = [str(t)  for t in range(-n,n+1)]
 
-                im = plt.imshow(density_matrix_real)
+                max_I = np.max(np.abs(observables[1][1]))
+                im = plt.imshow(density_matrix_real, vmin=-max_I,vmax=max_I)
                 plt.xlabel(r'signal mode i')
                 plt.ylabel(r'idle mode j')
                 plt.xticks(loc,ticks)
@@ -134,16 +144,45 @@ def draw_observables(
                 plt.colorbar(im)
 
                 plt.subplot(3,2,i+5)
-                im = plt.imshow(density_matrix_imag)
+                im = plt.imshow(density_matrix_imag, vmin=-max_I,vmax=max_I)
                 plt.xlabel(r'signal mode i')
                 plt.ylabel(r'idle mode j')
                 plt.xticks(loc,ticks)
                 plt.yticks(loc,ticks)
                 plt.colorbar(im)
 
+        ax[0][0].text(-3.5,1,"(a)",fontsize=14)
+        ax[1][0].text(-3.5,1,"(b)",fontsize=14)
+        ax[2][0].text(-3.5,1,"(c)",fontsize=14)
+
         plt.figure(fig)
-        plt.savefig(save_location)
+        plt.savefig(f"{save_location}/observables.jpg")
         plt.close('all')
+
+        # calculting errors
+        with open(str(f"{save_location}/observables_err.txt"),"w") as file:
+                coincidence_rate_pred = observables[0][0]
+                coincidence_rate_grt = observables[1][0]
+                mse_err = ((coincidence_rate_pred-coincidence_rate_grt)**2).mean()
+                file.write(f"Coincidence rate mse error:{mse_err}\n")
+                
+                tvd_err = total_variation_distance(coincidence_rate_pred,coincidence_rate_grt)
+                file.write(f"Coincidence rate Total variation distance:{tvd_err}\n")
+
+
+                file.write(f"--------\n")
+                density_matrix_pred = observables[0][1]
+                density_matrix_grt = observables[1][1]
+                mse_err = (np.abs((density_matrix_pred-density_matrix_grt)**2)).mean()
+                file.write(f"Density matrix mse error:{mse_err}\n")
+                td_err = trace_distace(density_matrix_pred,density_matrix_grt)
+                file.write(f"Density matrix trace distance:{td_err}\n\n")
+                
+                mse_err = (np.abs((np.real(density_matrix_pred)-np.real(density_matrix_grt))**2)).mean()
+                file.write(f"Density matrix real part mse error:{mse_err}\n\n")
+
+                mse_err = (np.abs((np.imag(density_matrix_pred)-np.imag(density_matrix_grt))**2)).mean()
+                file.write(f"Density matrix imag part mse error:{mse_err}\n\n")
 
         
 def draw_corr(
