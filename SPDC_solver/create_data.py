@@ -5,7 +5,7 @@ import pickle
 from tqdm import tqdm
 
 
-def single_mode(p,l,config,N_samples,seed):
+def single_mode(p,l,config,N_samples,seed,crystal_coef={"max_mode1": 1, "max_mode2":0, "real_coef":np.array([1]),"img_coef":np.array([0])},is_crystal=False):
     '''
     creates a solution of a single mode of pump given by p,l
     Args:
