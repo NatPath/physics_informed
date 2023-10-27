@@ -1,0 +1,10 @@
+Coincidence rate mse error:0.00011547605390660465
+Coincidence rate Total variation distance:0.12265191972255707
+--------
+Density matrix mse error:0.47364360094070435
+Density matrix trace distance:5.829324722290039
+
+Density matrix real part mse error:0.3142620027065277
+
+Density matrix imag part mse error:0.15938159823417664
+

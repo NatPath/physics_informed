@@ -1,0 +1,5 @@
+Signal out mse error:7.362584153458585e-11
+Signal out Total variation distance:0.03282320126891136
+--------
+Idler out mse error:1.557110690386665e-10
+Idler out Total variation distance:0.04823810234665871
