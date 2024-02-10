@@ -332,7 +332,7 @@ def draw_SPDC(model,
     
     if __name__ == '__main__':
         plot_corr(u = total_out,y = total_y, ckpt_name = ckpt_name,results_dir = results_dir)
-        draw_utils.plot_4_report(u = total_out,y = total_y,z=9,ckpt_name=ckpt_name,results_dir=results_dir)
+        draw_utils.plot_4_report(u = total_out,y = total_y,z=-1,ckpt_name=ckpt_name,results_dir=results_dir)
 
 
     # for z in range(config['data']['nz']):

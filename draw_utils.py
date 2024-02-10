@@ -52,7 +52,7 @@ def plot_3d_grid(title,plots, row_names, col_names, numbers,results_dir,save_nam
     plt.savefig(f"{results_dir}/{save_name}.jpg")
 
 
-def plot_4_report(u,y,z=9,ckpt_name='default_ckpt.pt',results_dir='default_dir_name'):
+def plot_4_report(u,y,z=-1,ckpt_name='default_ckpt.pt',results_dir='default_dir_name'):
     results_dir=results_dir+f'/{ckpt_name[:-3]}'
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
