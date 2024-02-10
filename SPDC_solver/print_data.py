@@ -6,11 +6,12 @@ import plotly.express as px
 import plotly
 import pickle
 
-datapath = "/home/dor-hay.sha/project/data/spdc/uniform_pump_N-500_seed-1701_spp-10.bin"
+datapath = "/home/dor-hay.sha/project/physics_informed/SPDC_solver/tmp_dir/single_mode-(0,0)_N-10_maxZ-0.0002_seed-1701.bin"
+datapath = "/home/dor-hay.sha/project/physics_informed/SPDC_solver/tmp_dir/single_mode-(0,3)_N-10_maxZ-0.0002_seed-1701.bin"
 # datapath = "./random_pump_N-12_spp-4.bin"
 N = 0
 spp = 1
-z0 = 9
+z0 = 0
 
 with open(file=datapath,mode="rb") as file:
     data = pickle.load(file)
@@ -19,7 +20,7 @@ dict = ["pump","signal_vac", "idler_vac", "signal_out", "idler_out"]
 shape = Shape()
 
 X,Y = np.meshgrid(shape.x,shape.y, indexing='ij')
-for z in range(z0,10):
+for z in range(z0,20):
     for i in range(1):
          if "vac" not in dict[i]:
             if True:

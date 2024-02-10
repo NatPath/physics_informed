@@ -5,7 +5,7 @@ import pickle
 from tqdm import tqdm
 
 
-def single_mode(p,l,config,N_samples,seed,crystal_coef={"max_mode1": 1, "max_mode2":0, "real_coef":np.array([1]),"img_coef":np.array([0])},is_crystal=False):
+def single_mode(p,l,config,N_samples,seed,crystal_coef={"max_mode1": 1, "max_mode2":0, "real_coef":np.array([1]),"img_coef":np.array([0])},is_crystal=False, maxZ=1e-4):
     '''
     creates a solution of a single mode of pump given by p,l
     Args:
@@ -13,6 +13,7 @@ def single_mode(p,l,config,N_samples,seed,crystal_coef={"max_mode1": 1, "max_mod
         config - config of the pump
         N_samples - number of vac modes
         seed - seed for random vacum modes
+        maxZ - length of the crystal in meter
     Return:
         A.data - The solution tensor
     '''
@@ -23,7 +24,7 @@ def single_mode(p,l,config,N_samples,seed,crystal_coef={"max_mode1": 1, "max_mod
     coeffs_arr[idx] = 1
 
     pump_coef = {"max_mode1": max_mode1, "max_mode2":max_mode2, "real_coef":coeffs_arr.real,"img_coef":coeffs_arr.imag}
-    A = SPDC_solver(N=N_samples,crystal_coef=crystal_coef,is_crystal=is_crystal,config=config,pump_coef=pump_coef,data_creation=True, seed=seed)
+    A = SPDC_solver(N=N_samples,crystal_coef=crystal_coef,is_crystal=is_crystal,config=config,pump_coef=pump_coef,data_creation=True, seed=seed,shape=Shape(maxZ=maxZ))
     A.solve()
     return A.data
 
@@ -94,16 +95,16 @@ def fixed_pump(N_samples, config ,spp = None, loc = None, seed = 1701,crystal_co
 
     save_data(data,file_name)
 
-def fixed_pump_single_mode(N_samples, config ,p,l, loc = None, seed = 1701,crystal_coef={"max_mode1": 1, "max_mode2":0, "real_coef":np.array([1]),"img_coef":np.array([0])},is_crystal=False):
+def fixed_pump_single_mode(N_samples, config ,p,l, loc = None, seed = 1701,crystal_coef={"max_mode1": 1, "max_mode2":0, "real_coef":np.array([1]),"img_coef":np.array([0])},is_crystal=False, maxZ=1e-4):
     default_loc = "/home/dor-hay.sha/project/data/spdc"
-    file_name = str(f"single_mode-({p},{l})_N-{N_samples}_seed-{seed}.bin")
+    file_name = str(f"single_mode-({p},{l})_N-{N_samples}_maxZ-{maxZ}_seed-{seed}.bin")
     if loc is not None:
         file_name = str(f"{loc}/{file_name}")
     else:
         file_name = str(f"{default_loc}/{file_name}")
 
     print(f"Creating data: only a single mode, p={p}, l={l}")
-    data = single_mode(p = p,l = l,config = config,N_samples = N_samples, seed = seed)
+    data = single_mode(p = p,l = l,config = config,N_samples = N_samples, seed = seed, maxZ=maxZ)
 
     save_data(data,file_name)
 
@@ -200,11 +201,12 @@ if __name__ == '__main__':
     parser.add_argument('--spp', type=int,help='Number of samples that will be created for each pump')
     parser.add_argument('-p', type=int, default=0, help = 'p number if creation mode is \'single\' (default p = 0)')
     parser.add_argument('-l', type=int, default=0, help = 'l number if creation mode is \'single\' (default l = 0)')
+    parser.add_argument('-Z', type=float, default=1e-4, help = 'max Z the length of the crystal \'currently just for single\' (default Z = 1e-4m)')
     parser.add_argument('--crystal', action='store_true',default=False, help = 'Specify to create a custome crystal')
 
     args = parser.parse_args()
     config = Config(pump_waist=80e-6) # 40e-6, 60e-6, 100e-6, 120e-6
-
+    
     if args.crystal==True:
         
         p = 0
@@ -226,7 +228,7 @@ if __name__ == '__main__':
         fixed_pump(N_samples=args.N,crystal_coef=crystal_coef,is_crystal=is_crystal, config=config, spp=args.spp, loc=args.loc, seed=args.seed)
     
     elif args.mode == 'single':
-        fixed_pump_single_mode(N_samples=args.N,crystal_coef=crystal_coef,is_crystal=is_crystal, config=config, p=args.p, l=args.l, loc=args.loc, seed=args.seed)
+        fixed_pump_single_mode(N_samples=args.N,crystal_coef=crystal_coef,is_crystal=is_crystal, config=config, p=args.p, l=args.l, loc=args.loc, seed=args.seed, maxZ=args.Z)
 
     elif args.mode == 'random':
         random_pump(N_samples=args.N ,crystal_coef=crystal_coef,is_crystal=is_crystal, config=config, spp=args.spp, seed=args.seed, loc=args.loc)
