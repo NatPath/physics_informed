@@ -7,6 +7,7 @@ import pickle
 import numpy as onp 
 import matplotlib.pyplot as plt
 
+
 def get_observables(
         signal_out,
         idler_out,
@@ -133,22 +134,23 @@ def draw_observables(
 
                 n = density_matrix.shape[0] // 2
                 loc = range(density_matrix.shape[0])
-                ticks = [str(t)  for t in range(-n,n+1)]
+                ticks = [r"$\left|-1,-1\right\rangle$",r"$\left|-1,\ \ 0\right\rangle$",r"$\left|-1,\ \ 1\right\rangle$",r"$\left|\ \ 0,-1\right\rangle$",r"$\left|\ \ 0,\ \ 0\right\rangle$",r"$\left|\ \ 0,\ \ 1\right\rangle$",r"$\left|\ \ 1,-1\right\rangle$",r"$\left|\ \ 1,\ \ 0\right\rangle$",r"$\left|\ \ 1,\ \ 1\right\rangle$"]
+                # ticks = [str(t)  for t in range(-n,n+1)]
 
                 max_I = np.max(np.abs(observables[1][1]))
                 im = plt.imshow(density_matrix_real, vmin=-max_I,vmax=max_I)
-                plt.xlabel(r'signal mode i')
-                plt.ylabel(r'idle mode j')
-                plt.xticks(loc,ticks)
-                plt.yticks(loc,ticks)
+                # plt.xlabel(r'signal mode i')
+                # plt.ylabel(r'idle mode j')
+                plt.xticks(loc,ticks, fontsize=3)
+                plt.yticks(loc,ticks, fontsize=5) 
                 plt.colorbar(im)
 
                 plt.subplot(3,2,i+5)
                 im = plt.imshow(density_matrix_imag, vmin=-max_I,vmax=max_I)
-                plt.xlabel(r'signal mode i')
-                plt.ylabel(r'idle mode j')
-                plt.xticks(loc,ticks)
-                plt.yticks(loc,ticks)
+                # plt.xlabel(r'signal mode i')
+                # plt.ylabel(r'idle mode j')
+                plt.xticks(loc,ticks, fontsize=4)
+                plt.yticks(loc,ticks, fontsize=5)
                 plt.colorbar(im)
 
         ax[0][0].text(-3.5,1,"(a)",fontsize=14)

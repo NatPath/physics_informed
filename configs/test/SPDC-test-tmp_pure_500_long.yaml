@@ -1,9 +1,9 @@
 data:
   name: spdc
-  datapath: '/home/dor-hay.sha/project/data/spdc/single_mode-(0,1)_N-500_maxZ-0.0002_seed-123.bin'
-  total_num: 500
+  datapath: '/home/dor-hay.sha/project/data/spdc/single_mode-(0,1)_N-5000_maxZ-0.0002_seed-123.bin'
+  total_num: 5000
   offset: 0
-  n_sample: 500
+  n_sample: 5000
   nx: 121
   ny: 121
   nz: 20
@@ -26,10 +26,10 @@ model:
   grad: 'none'
 
 test:
-  batchsize: 2
+  batchsize: 1
   ckpt: 'checkpoints/spdc-FDM/spdc-pump-uniform_N-500_spp-10_ss-30_ratio-inf_bs-80_id-l40ejkz2_best_validation_yet.pt'
 
-  test_name: single_mode-(0,1)_N-500_maxZ-0.0002_seed-123
+  test_name: single_mode-(0,1)_N-5000_maxZ-0.0002_seed-123
 
 
 log:
